@@ -1,3 +1,8 @@
+/**
+ * NexPlay complete Prisma schema — platform foundation.
+ * GameModule / match state JSON remain game-agnostic.
+ */
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,31 +12,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Compte utilisateur
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
-  status       String   @default("active") // active | banned | deleted
+  status       String   @default("active")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  profile        PlayerProfile?
-  refreshTokens  RefreshToken[]
-  friendshipsOut Friendship[]   @relation("FriendshipRequester")
-  friendshipsIn  Friendship[]   @relation("FriendshipAddressee")
-  ownedClans     Clan[]         @relation("ClanOwner")
-  clanMembers    ClanMember[]
-  matchPlayers   MatchPlayer[]
-  matchMoves     MatchMove[]
-  gameStats      PlayerGameStat[]
-  badges         PlayerBadge[]
+  profile              PlayerProfile?
+  wallet               Wallet?
+  refreshTokens        RefreshToken[]
+  friendshipsOut       Friendship[]        @relation("FriendshipRequester")
+  friendshipsIn        Friendship[]        @relation("FriendshipAddressee")
+  ownedClans           Clan[]              @relation("ClanOwner")
+  clanMembers          ClanMember[]
+  matchPlayers         MatchPlayer[]
+  matchMoves           MatchMove[]
+  gameStats            PlayerGameStat[]
+  badges               PlayerBadge[]
+  notifications        Notification[]
+  seasonStandings      SeasonStanding[]
+  tournamentEntries    TournamentEntry[]   @relation("TournamentEntryUser")
+  dailyClaims          DailyRewardClaim[]
+  matchInvitesSent     MatchInvite[]       @relation("InviteFrom")
+  matchInvitesReceived MatchInvite[]       @relation("InviteTo")
+  walletLedger         WalletTransaction[]
+  externalResults      ExternalResult[]    @relation("ExternalSubmitter")
 }
 
 model PlayerProfile {
   userId      String  @id
   username    String  @unique
   displayName String
+  /// preset://lion | https://... | null
   avatarUrl   String?
   countryCode String  @default("BF")
   locale      String  @default("fr-BF")
@@ -41,6 +55,68 @@ model PlayerProfile {
   bio         String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Wallet {
+  userId    String   @id
+  nexCoins  Int      @default(100)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WalletTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  amount       Int
+  balanceAfter Int
+  reason       String
+  metaJson     String   @default("{}")
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyRewardClaim {
+  id        String   @id @default(cuid())
+  userId    String
+  /// YYYY-MM-DD UTC
+  dayKey    String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayKey])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // match_invite | match_result | tournament | season | clan | system
+  title     String
+  body      String
+  dataJson  String   @default("{}")
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model MatchInvite {
+  id        String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  gameId     String  @default("ludo")
+  mode       String  @default("private-2")
+  matchId    String?
+  status     String  @default("pending") // pending | accepted | declined | expired
+  createdAt  DateTime @default(now())
+
+  from User @relation("InviteFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  to   User @relation("InviteTo", fields: [toUserId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
@@ -57,7 +133,7 @@ model Friendship {
   id          String   @id @default(cuid())
   requesterId String
   addresseeId String
-  status      String   @default("pending") // pending | accepted | blocked
+  status      String   @default("pending")
   createdAt   DateTime @default(now())
 
   requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
@@ -71,58 +147,67 @@ model Clan {
   name        String   @unique
   tag         String
   logoUrl     String?
+  description String?
   countryCode String   @default("BF")
   ownerId     String
   rating      Int      @default(1000)
+  score       Int      @default(0)
+  maxMembers  Int      @default(50)
   createdAt   DateTime @default(now())
 
-  owner   User         @relation("ClanOwner", fields: [ownerId], references: [id])
+  owner   User               @relation("ClanOwner", fields: [ownerId], references: [id])
   members ClanMember[]
+  entries TournamentEntry[]
 }
 
 model ClanMember {
   id       String   @id @default(cuid())
   clanId   String
   userId   String
-  role     String   @default("member") // owner | admin | member
+  role     String   @default("member")
   joinedAt DateTime @default(now())
 
   clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clanId, userId])
+  @@unique([userId]) // un joueur = un clan (V1)
 }
 
 model GameDefinition {
-  id          String  @id // slug: ludo, chess…
-  name        String
-  minPlayers  Int
-  maxPlayers  Int
-  kind        String  @default("INTEGRATED") // INTEGRATED | EXTERNAL
-  isEnabled   Boolean @default(true)
-  configJson  String  @default("{}")
+  id         String  @id
+  name       String
+  minPlayers Int
+  maxPlayers Int
+  kind       String  @default("INTEGRATED")
+  isEnabled  Boolean @default(true)
+  configJson String  @default("{}")
 
   matches Match[]
   stats   PlayerGameStat[]
 }
 
 model Match {
-  id         String    @id @default(cuid())
-  gameId     String
-  mode       String
-  visibility String    @default("public") // public | private
-  status     String    @default("waiting") // waiting | active | finished | cancelled
-  region     String    @default("bf-ouaga")
-  inviteCode String?   @unique
-  stateJson  String    @default("{}")
-  winnerJson String    @default("[]")
-  createdAt  DateTime  @default(now())
-  startedAt  DateTime?
-  finishedAt DateTime?
+  id           String    @id @default(cuid())
+  gameId       String
+  mode         String
+  visibility   String    @default("public")
+  status       String    @default("waiting")
+  region       String    @default("bf-ouaga")
+  inviteCode   String?   @unique
+  stateJson    String    @default("{}")
+  winnerJson   String    @default("[]")
+  seasonId     String?
+  tournamentMatchId String?
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
 
-  game    GameDefinition @relation(fields: [gameId], references: [id])
-  players MatchPlayer[]
-  moves   MatchMove[]
+  game            GameDefinition   @relation(fields: [gameId], references: [id])
+  season          Season?          @relation(fields: [seasonId], references: [id])
+  tournamentMatch TournamentMatch? @relation(fields: [tournamentMatchId], references: [id])
+  players         MatchPlayer[]
+  moves           MatchMove[]
 }
 
 model MatchPlayer {
@@ -130,10 +215,11 @@ model MatchPlayer {
   matchId      String
   userId       String
   seat         Int
-  result       String? // win | loss | draw | abandon
+  result       String?
   ratingBefore Int     @default(1000)
   ratingAfter  Int?
   xpGained     Int     @default(0)
+  coinsGained  Int     @default(0)
 
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -143,13 +229,13 @@ model MatchPlayer {
 }
 
 model MatchMove {
-  id        String   @id @default(cuid())
-  matchId   String
-  seq       Int
-  playerId  String
+  id         String   @id @default(cuid())
+  matchId    String
+  seq        Int
+  playerId   String
   actionJson String
-  stateHash String
-  createdAt DateTime @default(now())
+  stateHash  String
+  createdAt  DateTime @default(now())
 
   match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player User  @relation(fields: [playerId], references: [id])
@@ -158,15 +244,16 @@ model MatchMove {
 }
 
 model PlayerGameStat {
-  id       String @id @default(cuid())
-  userId   String
-  gameId   String
-  played   Int    @default(0)
-  wins     Int    @default(0)
-  losses   Int    @default(0)
-  draws    Int    @default(0)
-  elo      Int    @default(1000)
-  winStreak Int   @default(0)
+  id        String @id @default(cuid())
+  userId    String
+  gameId    String
+  played    Int    @default(0)
+  wins      Int    @default(0)
+  losses    Int    @default(0)
+  draws     Int    @default(0)
+  elo       Int    @default(1000)
+  winStreak Int    @default(0)
+  bestStreak Int   @default(0)
 
   user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   game GameDefinition @relation(fields: [gameId], references: [id])
@@ -196,21 +283,63 @@ model PlayerBadge {
   @@unique([userId, badgeId])
 }
 
-model Tournament {
+/// Saison compétitive (ex: Saison 1 — Jan–Mars)
+model Season {
   id          String   @id @default(cuid())
-  gameId      String
+  code        String   @unique // S1-2026
   name        String
-  format      String   @default("single_elim")
-  scope       String   @default("individual") // individual | team
-  status      String   @default("draft")
-  bracketJson String   @default("{}")
-  scheduleJson String  @default("{}")
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String   @default("upcoming") // upcoming | active | completed
   rewardsJson String   @default("{}")
-  region      String   @default("bf-ouaga")
-  countryCode String?
   createdAt   DateTime @default(now())
 
+  standings   SeasonStanding[]
+  matches     Match[]
+  tournaments Tournament[]
+}
+
+model SeasonStanding {
+  id        String @id @default(cuid())
+  seasonId  String
+  userId    String
+  gameId    String @default("all") // all | ludo | …
+  points    Int    @default(0)
+  wins      Int    @default(0)
+  losses    Int    @default(0)
+  played    Int    @default(0)
+  rank      Int?
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId, gameId])
+  @@index([seasonId, gameId, points])
+}
+
+model Tournament {
+  id           String   @id @default(cuid())
+  gameId       String
+  /// INTEGRATED | EXTERNAL
+  gameKind     String   @default("INTEGRATED")
+  name         String
+  format       String   @default("single_elim")
+  scope        String   @default("individual")
+  status       String   @default("draft") // draft | open | seeding | running | completed | cancelled
+  maxEntries   Int      @default(32)
+  bracketJson  String   @default("{}")
+  scheduleJson String   @default("{}")
+  rewardsJson  String   @default("{}")
+  region       String   @default("bf-ouaga")
+  countryCode  String?
+  seasonId     String?
+  createdAt    DateTime @default(now())
+  startsAt     DateTime?
+  endsAt       DateTime?
+
+  season  Season?           @relation(fields: [seasonId], references: [id])
   entries TournamentEntry[]
+  rounds  TournamentMatch[]
 }
 
 model TournamentEntry {
@@ -220,6 +349,44 @@ model TournamentEntry {
   clanId       String?
   seed         Int?
   placement    Int?
+  status       String  @default("registered") // registered | checked_in | eliminated | winner
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User?      @relation("TournamentEntryUser", fields: [userId], references: [id])
+  clan       Clan?      @relation(fields: [clanId], references: [id])
+
+  @@index([tournamentId])
+}
+
+model TournamentMatch {
+  id             String  @id @default(cuid())
+  tournamentId   String
+  round          Int
+  position       Int
+  entryAId       String?
+  entryBId       String?
+  winnerEntryId  String?
+  status         String  @default("pending") // pending | ready | playing | awaiting_result | completed | bye
+  integratedMatchId String?
+  /// Pour EXTERNAL : preuve URL + notes
+  evidenceJson   String  @default("{}")
+  resultValidated Boolean @default(false)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches    Match[]
+
+  @@unique([tournamentId, round, position])
+}
+
+model ExternalResult {
+  id                String   @id @default(cuid())
+  tournamentMatchId String
+  submittedById     String
+  winnerEntryId     String
+  evidenceUrl       String?
+  notes             String?
+  status            String   @default("pending") // pending | approved | rejected
+  createdAt         DateTime @default(now())
+
+  submitter User @relation("ExternalSubmitter", fields: [submittedById], references: [id])
 }

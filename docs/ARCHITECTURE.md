@@ -143,11 +143,12 @@ Calendrier, inscriptions équipes, résultats manuels/API, classements, rewards 
 
 | Phase | Contenu |
 |-------|---------|
-| **V1 (actuelle)** | Monorepo, game-core, Ludo, auth, matchmaking local, UI mobile-first |
-| V1.1 | Dames, Awalé, Dominos |
-| V1.2 | Échecs + ELO |
-| V2 | Tournois, clans, chat |
-| V3 | Compétitions externes COD/PUBG/FF/FC/Fortnite |
+| **V1** | Monorepo, game-core, Ludo, auth, matchmaking, UI mobile-first |
+| **V1.5 (cette itération)** | Notifs, saisons, NexCoins, Tournament Engine, clans, profil avancé |
+| V1.1 | Dames, Dominos, Awalé |
+| V1.2 | Échecs + ELO deep |
+| V2 | Uno, chat global, amis complets |
+| V3 | Compétitions externes COD/PUBG/FF/FC à grande échelle |
 | V4 | Multi-région K8s, analytics, anti-cheat avancé |
 
 ---
@@ -158,6 +159,21 @@ Calendrier, inscriptions équipes, résultats manuels/API, classements, rewards 
 - Mots de passe argon2id
 - JWT court + refresh rotatif
 - CORS strict
-- Validation Zod/class-validator sur toutes les entrées
+- Validation Zod sur toutes les entrées
 - Secrets via env / Vault
 - RGPD / données perso : consentement, export, suppression
+
+---
+
+## 7. Fondation compétitive (post-V1)
+
+Livré dans `docs/PLATFORM_FOUNDATION.md` :
+
+- Notifications temps réel (`notify` Socket.IO + table `Notification`)
+- Saisons + classement saisonnier
+- NexCoins (wallet virtuel, daily reward)
+- Tournament Engine (INTEGRATED + EXTERNAL)
+- Clans (CRUD, score, 1 clan / joueur)
+- Profil enrichi (historique, winrate, badges, XP bar, avatar presets)
+
+**GameModule non modifié** — hooks dans `GameOrchestrator.finalizeMatch` uniquement.

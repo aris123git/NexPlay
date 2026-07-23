@@ -74,8 +74,10 @@ export async function registerHandler(req: Request, res: Response) {
           countryCode: (countryCode ?? 'BF').toUpperCase(),
           locale: 'fr-BF',
           currency: 'XOF',
+          avatarUrl: 'preset://lion',
         },
       },
+      wallet: { create: { nexCoins: 100 } },
     },
     include: { profile: true },
   });
@@ -199,17 +201,7 @@ export function verifySocketToken(token: string): AuthUser | null {
 }
 
 export async function meHandler(req: Request, res: Response) {
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: req.user!.id },
-    include: {
-      profile: true,
-      gameStats: true,
-      badges: { include: { badge: true } },
-    },
-  });
-  return res.json({
-    user: publicUser(user),
-    stats: user.gameStats,
-    badges: user.badges.map((b) => b.badge),
-  });
+  const { getFullProfile } = await import('../profile/service.js');
+  const profile = await getFullProfile(req.user!.id);
+  return res.json(profile);
 }

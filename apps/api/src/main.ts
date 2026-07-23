@@ -5,6 +5,8 @@ import { loginHandler, meHandler, registerHandler, authMiddleware } from './auth
 import { config } from './config.js';
 import { createRealtime } from './realtime/gateway.js';
 import { apiRouter } from './api-routes.js';
+import { platformRouter } from './platform-routes.js';
+import { bindNotificationIo } from './notifications/service.js';
 
 async function main() {
   const app = express();
@@ -15,9 +17,11 @@ async function main() {
   app.post('/auth/login', loginHandler);
   app.get('/auth/me', authMiddleware, meHandler);
   app.use('/api', apiRouter);
+  app.use('/api', platformRouter);
 
   const httpServer = createServer(app);
   const io = createRealtime(httpServer);
+  bindNotificationIo(io);
   app.set('io', io);
 
   httpServer.listen(config.port, () => {

@@ -223,7 +223,7 @@ apiRouter.get('/users/:username', async (req, res) => {
   });
 });
 
-// Stubs sociaux / tournois / clans pour la V1
+// Stubs sociaux conservés — clans/tournois complets via platform-routes
 apiRouter.get('/social/friends', authMiddleware, async (req, res) => {
   const rows = await prisma.friendship.findMany({
     where: {
@@ -231,15 +231,5 @@ apiRouter.get('/social/friends', authMiddleware, async (req, res) => {
       OR: [{ requesterId: req.user!.id }, { addresseeId: req.user!.id }],
     },
   });
-  res.json({ friends: rows, note: 'V1 stub — invitations UI à venir' });
-});
-
-apiRouter.get('/tournaments', async (_req, res) => {
-  const list = await prisma.tournament.findMany({ take: 20, orderBy: { createdAt: 'desc' } });
-  res.json({ tournaments: list, note: 'Infrastructure prête — création complète en V2' });
-});
-
-apiRouter.get('/clans', async (_req, res) => {
-  const list = await prisma.clan.findMany({ take: 20, orderBy: { rating: 'desc' } });
-  res.json({ clans: list, note: 'Infrastructure prête — UX clans en V2' });
+  res.json({ friends: rows });
 });

@@ -136,11 +136,27 @@ export class GameOrchestrator {
     outcome: Outcome,
     mod: AnyGameModule,
   ) {
+    const { coinsForResult, creditCoins, ensureWallet } = await import('../wallet/service.js');
+    const { recordSeasonResult, getActiveSeason } = await import('../seasons/service.js');
+    const { notify } = await import('../notifications/service.js');
+    const { addClanScore } = await import('../clans/service.js');
+    const { levelFromXp } = await import('../profile/service.js');
+
     const stats = mod.computeStats(state, outcome);
     const match = await prisma.match.findUniqueOrThrow({
       where: { id: matchId },
       include: { players: true },
     });
+
+    const activeSeason = await getActiveSeason();
+    if (activeSeason && !match.seasonId) {
+      await prisma.match.update({
+        where: { id: matchId },
+        data: { seasonId: activeSeason.id },
+      });
+    }
+
+    const coinGrants: { userId: string; coins: number; result: string }[] = [];
 
     await prisma.$transaction(async (tx) => {
       await tx.match.update({
@@ -150,27 +166,31 @@ export class GameOrchestrator {
           finishedAt: new Date(),
           stateJson: JSON.stringify(state),
           winnerJson: JSON.stringify(outcome.winnerIds),
+          ...(activeSeason ? { seasonId: activeSeason.id } : {}),
         },
       });
 
       for (const delta of stats) {
         const mp = match.players.find((p) => p.userId === delta.playerId);
         if (!mp) continue;
-        const ratingAfter = mp.ratingBefore + (delta.eloDelta ?? (delta.result === 'win' ? 16 : -8));
+        const ratingAfter =
+          mp.ratingBefore + (delta.eloDelta ?? (delta.result === 'win' ? 16 : -8));
+        const coins = coinsForResult(delta.result);
+        coinGrants.push({ userId: delta.playerId, coins, result: delta.result });
+
         await tx.matchPlayer.update({
           where: { id: mp.id },
           data: {
             result: delta.result,
             xpGained: delta.xp,
             ratingAfter,
+            coinsGained: coins,
           },
         });
 
         await tx.playerProfile.update({
           where: { userId: delta.playerId },
-          data: {
-            xp: { increment: delta.xp },
-          },
+          data: { xp: { increment: delta.xp } },
         });
 
         const existing = await tx.playerGameStat.findUnique({
@@ -189,9 +209,11 @@ export class GameOrchestrator {
               draws: delta.result === 'draw' ? 1 : 0,
               elo: ratingAfter,
               winStreak: delta.result === 'win' ? 1 : 0,
+              bestStreak: delta.result === 'win' ? 1 : 0,
             },
           });
         } else {
+          const nextStreak = delta.result === 'win' ? existing.winStreak + 1 : 0;
           await tx.playerGameStat.update({
             where: { id: existing.id },
             data: {
@@ -200,16 +222,16 @@ export class GameOrchestrator {
               losses: { increment: delta.result === 'loss' ? 1 : 0 },
               draws: { increment: delta.result === 'draw' ? 1 : 0 },
               elo: ratingAfter,
-              winStreak: delta.result === 'win' ? existing.winStreak + 1 : 0,
+              winStreak: nextStreak,
+              bestStreak: Math.max(existing.bestStreak, nextStreak),
             },
           });
         }
 
-        // Level up simple: 100 XP / niveau
         const profile = await tx.playerProfile.findUniqueOrThrow({
           where: { userId: delta.playerId },
         });
-        const newLevel = Math.floor(profile.xp / 100) + 1;
+        const newLevel = levelFromXp(profile.xp);
         if (newLevel !== profile.level) {
           await tx.playerProfile.update({
             where: { userId: delta.playerId },
@@ -231,6 +253,32 @@ export class GameOrchestrator {
         }
       }
     });
+
+    // Side-effects hors transaction principale (wallet / saison / notifs / clan)
+    for (const g of coinGrants) {
+      await ensureWallet(g.userId);
+      await creditCoins(g.userId, g.coins, 'match_reward', {
+        matchId,
+        result: g.result,
+      });
+      await recordSeasonResult({
+        userId: g.userId,
+        gameId: match.gameId,
+        result: g.result as 'win' | 'loss' | 'draw' | 'abandon',
+      });
+      if (g.result === 'win') await addClanScore(g.userId, 10);
+
+      const won = outcome.winnerIds.includes(g.userId);
+      await notify({
+        userId: g.userId,
+        type: 'match_result',
+        title: won ? 'Victoire !' : 'Partie terminée',
+        body: won
+          ? `Tu gagnes +${g.coins} NexCoins`
+          : `Résultat enregistré (+${g.coins} NexCoins)`,
+        data: { matchId, gameId: match.gameId, result: g.result, coins: g.coins },
+      });
+    }
   }
 
   /** Masque le secret des dés avant envoi client */
