@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Compte utilisateur
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  status       String   @default("active") // active | banned | deleted
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile        PlayerProfile?
+  refreshTokens  RefreshToken[]
+  friendshipsOut Friendship[]   @relation("FriendshipRequester")
+  friendshipsIn  Friendship[]   @relation("FriendshipAddressee")
+  ownedClans     Clan[]         @relation("ClanOwner")
+  clanMembers    ClanMember[]
+  matchPlayers   MatchPlayer[]
+  matchMoves     MatchMove[]
+  gameStats      PlayerGameStat[]
+  badges         PlayerBadge[]
+}
+
+model PlayerProfile {
+  userId      String  @id
+  username    String  @unique
+  displayName String
+  avatarUrl   String?
+  countryCode String  @default("BF")
+  locale      String  @default("fr-BF")
+  currency    String  @default("XOF")
+  level       Int     @default(1)
+  xp          Int     @default(0)
+  bio         String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      String   @default("pending") // pending | accepted | blocked
+  createdAt   DateTime @default(now())
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+}
+
+model Clan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  tag         String
+  logoUrl     String?
+  countryCode String   @default("BF")
+  ownerId     String
+  rating      Int      @default(1000)
+  createdAt   DateTime @default(now())
+
+  owner   User         @relation("ClanOwner", fields: [ownerId], references: [id])
+  members ClanMember[]
+}
+
+model ClanMember {
+  id       String   @id @default(cuid())
+  clanId   String
+  userId   String
+  role     String   @default("member") // owner | admin | member
+  joinedAt DateTime @default(now())
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clanId, userId])
+}
+
+model GameDefinition {
+  id          String  @id // slug: ludo, chess…
+  name        String
+  minPlayers  Int
+  maxPlayers  Int
+  kind        String  @default("INTEGRATED") // INTEGRATED | EXTERNAL
+  isEnabled   Boolean @default(true)
+  configJson  String  @default("{}")
+
+  matches Match[]
+  stats   PlayerGameStat[]
+}
+
+model Match {
+  id         String    @id @default(cuid())
+  gameId     String
+  mode       String
+  visibility String    @default("public") // public | private
+  status     String    @default("waiting") // waiting | active | finished | cancelled
+  region     String    @default("bf-ouaga")
+  inviteCode String?   @unique
+  stateJson  String    @default("{}")
+  winnerJson String    @default("[]")
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  game    GameDefinition @relation(fields: [gameId], references: [id])
+  players MatchPlayer[]
+  moves   MatchMove[]
+}
+
+model MatchPlayer {
+  id           String  @id @default(cuid())
+  matchId      String
+  userId       String
+  seat         Int
+  result       String? // win | loss | draw | abandon
+  ratingBefore Int     @default(1000)
+  ratingAfter  Int?
+  xpGained     Int     @default(0)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@unique([matchId, seat])
+}
+
+model MatchMove {
+  id        String   @id @default(cuid())
+  matchId   String
+  seq       Int
+  playerId  String
+  actionJson String
+  stateHash String
+  createdAt DateTime @default(now())
+
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player User  @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, seq])
+}
+
+model PlayerGameStat {
+  id       String @id @default(cuid())
+  userId   String
+  gameId   String
+  played   Int    @default(0)
+  wins     Int    @default(0)
+  losses   Int    @default(0)
+  draws    Int    @default(0)
+  elo      Int    @default(1000)
+  winStreak Int   @default(0)
+
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game GameDefinition @relation(fields: [gameId], references: [id])
+
+  @@unique([userId, gameId])
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  code        String @unique
+  name        String
+  description String
+  iconUrl     String?
+
+  holders PlayerBadge[]
+}
+
+model PlayerBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model Tournament {
+  id          String   @id @default(cuid())
+  gameId      String
+  name        String
+  format      String   @default("single_elim")
+  scope       String   @default("individual") // individual | team
+  status      String   @default("draft")
+  bracketJson String   @default("{}")
+  scheduleJson String  @default("{}")
+  rewardsJson String   @default("{}")
+  region      String   @default("bf-ouaga")
+  countryCode String?
+  createdAt   DateTime @default(now())
+
+  entries TournamentEntry[]
+}
+
+model TournamentEntry {
+  id           String  @id @default(cuid())
+  tournamentId String
+  userId       String?
+  clanId       String?
+  seed         Int?
+  placement    Int?
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}

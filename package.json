@@ -1,0 +1,28 @@
+{
+  "name": "nexplay",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NexPlay — plateforme mondiale de jeux compétitifs",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/games/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @nexplay/game-core && npm run build -w @nexplay/game-ludo && npm run build -w @nexplay/api && npm run build -w @nexplay/web",
+    "dev": "npm run build -w @nexplay/game-core && npm run build -w @nexplay/game-ludo && concurrently -n api,web -c cyan,magenta \"npm run dev -w @nexplay/api\" \"npm run dev -w @nexplay/web\"",
+    "dev:api": "npm run build -w @nexplay/game-core && npm run build -w @nexplay/game-ludo && npm run dev -w @nexplay/api",
+    "dev:web": "npm run dev -w @nexplay/web",
+    "test": "npm run test -w @nexplay/game-ludo && npm run test -w @nexplay/api",
+    "db:push": "npm run db:push -w @nexplay/api",
+    "db:seed": "npm run db:seed -w @nexplay/api",
+    "lint": "npm run lint -w @nexplay/api --if-present && npm run lint -w @nexplay/web --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

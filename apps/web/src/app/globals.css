@@ -1,0 +1,477 @@
+:root {
+  --bg0: #0b1a14;
+  --bg1: #12261d;
+  --bg2: #1a3328;
+  --sand: #e8d5a8;
+  --gold: #d4a017;
+  --coral: #e85d4c;
+  --mint: #3dba8a;
+  --cream: #f3ebe0;
+  --ink: #0a120e;
+  --muted: #9bb5a6;
+  --danger: #e85d4c;
+  --ok: #3dba8a;
+  --font-display: "Syne", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --radius: 14px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #1f4d38 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #3a2a12 0%, transparent 50%),
+    linear-gradient(165deg, var(--bg0), var(--bg1) 40%, #0e1f18);
+  color: var(--cream);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.1rem 0.5rem;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+  background: linear-gradient(120deg, var(--sand), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem calc(0.8rem + var(--safe-bottom));
+  margin-top: auto;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(10px);
+  position: sticky;
+  bottom: 0;
+}
+
+.nav-tabs a {
+  text-align: center;
+  padding: 0.65rem 0.25rem;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.nav-tabs a.active {
+  color: var(--cream);
+  background: rgba(61, 186, 138, 0.15);
+}
+
+.page {
+  flex: 1;
+  padding: 0.5rem 1.1rem 1.5rem;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 8vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.lede {
+  color: var(--muted);
+  margin: 0 0 1.4rem;
+  line-height: 1.45;
+  font-size: 0.98rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.25rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--mint), #2a9a6f);
+  color: var(--ink);
+  width: 100%;
+}
+
+.btn-secondary {
+  background: rgba(243, 235, 224, 0.08);
+  color: var(--cream);
+  border: 1px solid rgba(243, 235, 224, 0.12);
+  width: 100%;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--sand);
+  padding: 0.4rem 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.field label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(243, 235, 224, 0.12);
+  border-radius: 12px;
+  padding: 0.85rem 0.95rem;
+  color: var(--cream);
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: rgba(61, 186, 138, 0.55);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 1.2rem 0 0.7rem;
+  font-weight: 700;
+}
+
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(243, 235, 224, 0.08);
+}
+
+.game-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  background: linear-gradient(145deg, #2a4a38, #1a3026);
+  color: var(--sand);
+  flex-shrink: 0;
+}
+
+.game-icon.disabled {
+  opacity: 0.45;
+}
+
+.game-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-meta strong {
+  display: block;
+  font-size: 1.02rem;
+}
+
+.game-meta span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(212, 160, 23, 0.18);
+  color: var(--gold);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.stat {
+  text-align: center;
+  padding: 0.9rem 0.4rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.stat b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.stat span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, var(--mint), var(--gold));
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.fade-in {
+  animation: fadeUp 0.45s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(61, 186, 138, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(61, 186, 138, 0);
+  }
+}
+
+.waiting {
+  animation: pulseGlow 1.8s ease infinite;
+}
+
+/* Ludo board */
+.ludo-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ludo-board {
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent),
+    #163226;
+  border: 1px solid rgba(243, 235, 224, 0.1);
+  padding: 0.55rem;
+  display: grid;
+  grid-template-columns: 1fr 0.7fr 1fr;
+  grid-template-rows: 1fr 0.7fr 1fr;
+  gap: 0.35rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.yard {
+  border-radius: 14px;
+  padding: 0.45rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.yard.red {
+  background: rgba(232, 93, 76, 0.25);
+}
+.yard.green {
+  background: rgba(61, 186, 138, 0.25);
+}
+.yard.yellow {
+  background: rgba(212, 160, 23, 0.25);
+}
+.yard.blue {
+  background: rgba(74, 144, 226, 0.25);
+}
+
+.token {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.token.selectable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--sand);
+  animation: pulseGlow 1.4s ease infinite;
+}
+
+.token.red {
+  background: #e85d4c;
+}
+.token.green {
+  background: #3dba8a;
+}
+.token.yellow {
+  background: #d4a017;
+}
+.token.blue {
+  background: #4a90e2;
+}
+
+.center-path {
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--sand);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0.4rem;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dice {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.dice.spin {
+  animation: dicePop 0.35s ease;
+}
+
+@keyframes dicePop {
+  0% {
+    transform: rotate(-12deg) scale(0.85);
+  }
+  60% {
+    transform: rotate(8deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+.chat-line {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.2rem 0;
+}
+
+.chat-line b {
+  color: var(--sand);
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: 520px;
+    border-left: 1px solid rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+  }
+}
