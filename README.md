@@ -32,13 +32,26 @@ npm run dev
 - Web : http://localhost:3000
 - API : http://localhost:4000
 
+## V1.5 — Fondation compétitive
+
+Avant d’ajouter de nouveaux jeux, le socle plateforme inclut :
+
+- Notifications temps réel
+- Saisons + classement
+- NexCoins + récompense quotidienne
+- Tournament Engine (intégré + e-sport externe)
+- Clans
+- Profil avancé (stats, historique, badges, XP, avatar)
+
+Voir `docs/PLATFORM_FOUNDATION.md` et `docs/MIGRATIONS.md`.
+
 ## V1 livrée
 
 - Architecture modulaire jeux
 - Auth (register / login / profil)
 - Matchmaking public + parties privées
 - **Ludo** (2–4 joueurs, dés sécurisés serveur, historique, stats/ELO)
-- Classement, badges, stubs social / tournois / clans
+- Classement, badges
 
 ## Ajouter un jeu
 

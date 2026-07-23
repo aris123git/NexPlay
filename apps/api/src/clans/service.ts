@@ -38,6 +38,15 @@ export async function createClan(input: {
     data: { clanId: clan.id },
   });
 
+  const badge = await prisma.badge.findUnique({ where: { code: 'clan_founder' } });
+  if (badge) {
+    await prisma.playerBadge.upsert({
+      where: { userId_badgeId: { userId: input.ownerId, badgeId: badge.id } },
+      create: { userId: input.ownerId, badgeId: badge.id },
+      update: {},
+    });
+  }
+
   return clan;
 }
 

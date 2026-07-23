@@ -11,11 +11,14 @@ nexplay/
 │   │   │   ├── auth/
 │   │   │   ├── users/
 │   │   │   ├── social/           # amis, chat (stubs V1)
+│   │   │   ├── notifications/
+│   │   │   ├── seasons/
+│   │   │   ├── wallet/
+│   │   │   ├── tournaments/      # Tournament Engine
+│   │   │   ├── clans/
+│   │   │   ├── profile/
 │   │   │   ├── matchmaking/
 │   │   │   ├── matches/
-│   │   │   ├── tournaments/      # stubs V1
-│   │   │   ├── clans/            # stubs V1
-│   │   │   ├── realtime/         # Socket.IO gateway
 │   │   │   ├── games/            # GameOrchestrator + registry
 │   │   │   └── common/
 │   │   └── prisma/
