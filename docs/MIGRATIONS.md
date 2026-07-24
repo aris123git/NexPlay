@@ -64,7 +64,7 @@ cd apps/api && npx prisma db push && npm run db:seed
 ## Delta V2.6 — Dames + NexPlay ID
 
 ### NexPlay ID
-- `PlayerProfile.nexplayId` unique (`NXP-XXXX-XXXX`)
+- `PlayerProfile.nexplayId` unique optionnel (`NXP-XXXX-XXXX`) — backfill au seed
 - Tag affiché `username#XXXX` dérivé de l’ID
 
 ### Jeu Dames
