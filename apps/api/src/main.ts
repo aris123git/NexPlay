@@ -7,11 +7,13 @@ import { createRealtime } from './realtime/gateway.js';
 import { apiRouter } from './api-routes.js';
 import { platformRouter } from './platform-routes.js';
 import { v2Router } from './v2-routes.js';
+import { v25Router } from './v25-routes.js';
+import { publicApiRouter } from './public-api/router.js';
 import { bindNotificationIo } from './notifications/service.js';
 
 async function main() {
   const app = express();
-  app.use(cors({ origin: config.corsOrigin, credentials: true }));
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
 
   app.post('/auth/register', registerHandler);
@@ -20,6 +22,34 @@ async function main() {
   app.use('/api', apiRouter);
   app.use('/api', platformRouter);
   app.use('/api', v2Router);
+  app.use('/api', v25Router);
+
+  app.get('/public/openapi.json', async (_req, res) => {
+    const { readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    try {
+      const candidates = [
+        join(process.cwd(), 'docs/openapi-public.json'),
+        join(process.cwd(), '../../docs/openapi-public.json'),
+        join(process.cwd(), 'apps/api/docs/openapi-public.json'),
+      ];
+      let raw = '';
+      for (const c of candidates) {
+        try {
+          raw = await readFile(c, 'utf8');
+          break;
+        } catch {
+          /* try next */
+        }
+      }
+      if (!raw) throw new Error('missing');
+      res.type('json').send(raw);
+    } catch {
+      res.status(404).json({ error: 'OPENAPI_NOT_FOUND' });
+    }
+  });
+
+  app.use('/public', publicApiRouter);
 
   const httpServer = createServer(app);
   const io = createRealtime(httpServer);

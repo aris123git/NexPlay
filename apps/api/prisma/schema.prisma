@@ -51,6 +51,9 @@ model User {
   analyticsEvents      AnalyticsEvent[]
   adminAudits          AdminAuditLog[]     @relation("AdminActor")
   cheatReports         CheatReport[]       @relation("CheatReporter")
+  inventory            PlayerInventory[]
+  challengeProgress    ChallengeProgress[]
+  apiKeys              ApiKey[]
 }
 
 model PlayerProfile {
@@ -60,7 +63,7 @@ model PlayerProfile {
   /// preset://lion | https://... | null
   avatarUrl   String?
   countryCode String    @default("BF")
-  locale      String    @default("fr-BF")
+  locale      String    @default("fr")
   currency    String    @default("XOF")
   level       Int       @default(1)
   xp          Int       @default(0)
@@ -69,6 +72,14 @@ model PlayerProfile {
   presenceStatus String @default("offline")
   lastSeenAt  DateTime?
   currentMatchId String?
+  /// IANA timezone e.g. Africa/Ouagadougou
+  timezone    String  @default("Africa/Ouagadougou")
+  /// AF | EU | AS | NA | SA | OC
+  continentCode String @default("AF")
+  regionName  String?
+  cityName    String?
+  /// Cosmétiques équipés (IDs catalogue)
+  equippedJson String @default("{}")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -525,4 +536,84 @@ model AdminAuditLog {
   actor User @relation("AdminActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+
+// ——— V2.5 : Shop, Events, Public API ———
+
+model ShopItem {
+  id          String   @id @default(cuid())
+  sku         String   @unique
+  /// avatar | frame | emote | badge | dice_skin | board | sfx | anim
+  category    String
+  nameKey     String
+  descriptionKey String?
+  priceCoins  Int
+  rarity      String   @default("common") // common | rare | epic | legendary
+  previewUrl  String?
+  metaJson    String   @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  owners PlayerInventory[]
+}
+
+model PlayerInventory {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  acquiredAt DateTime @default(now())
+  source    String   @default("shop") // shop | reward | event | admin
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item ShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  /// daily | weekly | seasonal | mission
+  kind        String
+  titleKey    String
+  descriptionKey String?
+  /// { type: "wins"|"matches"|"elo_gain", gameId?: string, target: number }
+  goalJson    String
+  rewardJson  String   @default("{}")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  seasonId    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  progress ChallengeProgress[]
+}
+
+model ChallengeProgress {
+  id          String   @id @default(cuid())
+  challengeId String
+  userId      String
+  progress    Int      @default(0)
+  completedAt DateTime?
+  claimedAt   DateTime?
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  scopesJson String    @default("[\"read:public\"]")
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -338,6 +338,18 @@ export class GameOrchestrator {
     } catch {
       /* ignore */
     }
+    try {
+      const { onMatchFinished } = await import('../events/service.js');
+      for (const g of coinGrants) {
+        await onMatchFinished({
+          userId: g.userId,
+          gameId: match.gameId,
+          result: g.result,
+        });
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   /** Masque le secret des dés avant envoi client */

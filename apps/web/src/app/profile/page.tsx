@@ -277,6 +277,13 @@ export default function ProfilePage() {
       <button
         className="btn btn-secondary"
         style={{ marginTop: '1.5rem' }}
+        onClick={() => router.push('/settings')}
+      >
+        Langue & région / API
+      </button>
+      <button
+        className="btn btn-secondary"
+        style={{ marginTop: '0.7rem' }}
         onClick={() => {
           logout();
           router.push('/');

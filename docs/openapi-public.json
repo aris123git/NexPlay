@@ -1,0 +1,75 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NexPlay Public API",
+    "version": "1.0.0",
+    "description": "API publique en lecture pour intégrations et futurs plugins. Authentification via header X-Api-Key (créer une clé dans /api/developer/keys)."
+  },
+  "servers": [{ "url": "http://localhost:4000/public" }],
+  "security": [{ "ApiKeyAuth": [] }],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key"
+      }
+    }
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "summary": "Health + joueurs online",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/v1/games": {
+      "get": {
+        "summary": "Catalogue des jeux",
+        "responses": { "200": { "description": "Liste jeux installés et catalogue" } }
+      }
+    },
+    "/v1/leaderboards/{gameId}": {
+      "get": {
+        "summary": "Classement par jeu",
+        "parameters": [
+          { "name": "gameId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "scope", "in": "query", "schema": { "type": "string", "enum": ["world", "continent", "country", "region"] } },
+          { "name": "continent", "in": "query", "schema": { "type": "string" } },
+          { "name": "country", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Entries classées" } }
+      }
+    },
+    "/v1/seasons": {
+      "get": {
+        "summary": "Saisons compétitives",
+        "responses": { "200": { "description": "Saisons + active" } }
+      }
+    },
+    "/v1/clans/leaderboard": {
+      "get": {
+        "summary": "Classement des clans",
+        "responses": { "200": { "description": "Clans classés" } }
+      }
+    },
+    "/v1/shop": {
+      "get": {
+        "summary": "Catalogue boutique cosmétique",
+        "responses": { "200": { "description": "Items" } }
+      }
+    },
+    "/v1/i18n": {
+      "get": {
+        "summary": "Catalogue localisation",
+        "responses": { "200": { "description": "Locales, devises, fuseaux" } }
+      }
+    },
+    "/v1/tournaments": {
+      "get": {
+        "summary": "Tournois publics",
+        "responses": { "200": { "description": "Liste" } }
+      }
+    }
+  }
+}

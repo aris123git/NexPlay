@@ -129,6 +129,8 @@ async function main() {
             username: 'nexplay_admin',
             displayName: 'NexPlay Admin',
             countryCode: 'BF',
+            continentCode: 'AF',
+            timezone: 'Africa/Ouagadougou',
             avatarUrl: 'preset://shield',
           },
         },
@@ -142,6 +144,12 @@ async function main() {
       data: { role: 'admin' },
     });
   }
+
+  const { seedShopCatalog } = await import('../src/shop/service.js');
+  const { seedChallenges } = await import('../src/events/service.js');
+  await seedShopCatalog();
+  await seedChallenges();
+  console.log('Shop + défis quotidiens/hebdo seedés');
 }
 
 main()

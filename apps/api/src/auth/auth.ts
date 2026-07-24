@@ -68,6 +68,8 @@ export async function registerHandler(req: Request, res: Response) {
     return res.status(409).json({ error: 'EMAIL_OR_USERNAME_TAKEN' });
   }
 
+  const country = (countryCode ?? 'BF').toUpperCase();
+  const { resolveContinent } = await import('../i18n/catalog.js');
   const passwordHash = await argon2.hash(password);
   const user = await prisma.user.create({
     data: {
@@ -77,9 +79,11 @@ export async function registerHandler(req: Request, res: Response) {
         create: {
           username,
           displayName: displayName ?? username,
-          countryCode: (countryCode ?? 'BF').toUpperCase(),
-          locale: 'fr-BF',
+          countryCode: country,
+          continentCode: resolveContinent(country),
+          locale: 'fr',
           currency: 'XOF',
+          timezone: 'Africa/Ouagadougou',
           avatarUrl: 'preset://lion',
         },
       },

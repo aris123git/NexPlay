@@ -47,4 +47,18 @@ npx prisma migrate dev --name platform_foundation
 cd apps/api && npx prisma db push && npm run db:seed
 ```
 
-Admin seed : `admin@nexplay.local` / `adminadmin`
+## Delta V2.5 — Infrastructure mondiale
+
+### Nouvelles tables
+- `ShopItem`, `PlayerInventory`
+- `Challenge`, `ChallengeProgress`
+- `ApiKey`
+
+### Profil enrichi
+- `timezone`, `continentCode`, `regionName`, `cityName`, `equippedJson`
+
+```bash
+cd apps/api && npx prisma db push && npm run db:seed
+```
+
+Docs : `docs/PLATFORM_V25.md`, `docs/MODULES.md`, `docs/PUBLIC_API.md`

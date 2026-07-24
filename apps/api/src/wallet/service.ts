@@ -25,12 +25,16 @@ export async function creditCoins(
 ) {
   if (amount === 0) return ensureWallet(userId);
   return prisma.$transaction(async (tx) => {
-    const wallet = await tx.wallet.upsert({
+    const existing = await tx.wallet.findUnique({ where: { userId } });
+    const base = existing?.nexCoins ?? 100;
+    const next = base + amount;
+    if (next < 0) throw new Error('INSUFFICIENT_FUNDS');
+
+    await tx.wallet.upsert({
       where: { userId },
-      create: { userId, nexCoins: Math.max(0, 100 + amount) },
-      update: { nexCoins: { increment: amount } },
+      create: { userId, nexCoins: next },
+      update: { nexCoins: next },
     });
-    // Re-read after increment for accurate balance when amount > 0 on existing
     const fresh = await tx.wallet.findUniqueOrThrow({ where: { userId } });
     await tx.walletTransaction.create({
       data: {

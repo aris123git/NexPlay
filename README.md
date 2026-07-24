@@ -32,6 +32,10 @@ npm run dev
 - Web : http://localhost:3000
 - API : http://localhost:4000
 
+## V2.5 — Infrastructure mondiale
+
+i18n, classements mondiaux, boutique cosmétique, défis, API publique — `docs/PLATFORM_V25.md`, `docs/MODULES.md`.
+
 ## V2 — Socle multi-joueurs
 
 Présence, chat, amis, replays, admin, analytics — voir `docs/PLATFORM_V2.md`.
