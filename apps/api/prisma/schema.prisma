@@ -54,6 +54,7 @@ model User {
   inventory            PlayerInventory[]
   challengeProgress    ChallengeProgress[]
   apiKeys              ApiKey[]
+  pushSubscriptions    PushSubscription[]
 }
 
 model PlayerProfile {
@@ -618,4 +619,22 @@ model ApiKey {
   createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ——— V3.5 : Push mobile / PWA ———
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  /// web | ios | android
+  platform  String   @default("web")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

@@ -8,6 +8,7 @@ import { DamesBoard } from '@/games/dames/DamesBoard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getSocket } from '@/lib/socket';
+import { useConnection } from '@/lib/connection';
 
 type MatchPayload = {
   id: string;
@@ -54,6 +55,7 @@ type DamesPublicState = {
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
   const { session, loading } = useAuth();
+  const { pollIntervalMs } = useConnection();
   const router = useRouter();
   const [match, setMatch] = useState<MatchPayload | null>(null);
   const [error, setError] = useState('');
@@ -114,7 +116,7 @@ export default function MatchPage() {
       api<MatchPayload>(`/api/matches/${id}`, { token: session.accessToken })
         .then((d) => alive && setMatch(d))
         .catch(() => undefined);
-    }, 3000);
+    }, pollIntervalMs);
 
     return () => {
       alive = false;
@@ -122,7 +124,7 @@ export default function MatchPage() {
       socket.off('chat:match', onChat);
       clearInterval(poll);
     };
-  }, [session, id]);
+  }, [session, id, pollIntervalMs]);
 
   const meSeat = useMemo(() => {
     if (!match || !session) return -1;

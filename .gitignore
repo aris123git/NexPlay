@@ -13,3 +13,5 @@ apps/api/prisma/dev.db-journal
 coverage
 *.log
 *.tsbuildinfo
+.expo
+apps/mobile/node_modules

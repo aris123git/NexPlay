@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "NexPlay",
+    "slug": "nexplay",
+    "version": "3.5.0",
+    "orientation": "portrait",
+    "scheme": "nexplay",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b1a14"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexplay.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0b1a14"
+      },
+      "package": "com.nexplay.app"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000"
+    }
+  }
+}

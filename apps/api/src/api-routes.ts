@@ -16,6 +16,7 @@ apiRouter.get('/health', (_req, res) => {
 });
 
 apiRouter.get('/games', async (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
   const catalog = await prisma.gameDefinition.findMany({ orderBy: { name: 'asc' } });
   const installed = listInstalledGames();
   res.json({

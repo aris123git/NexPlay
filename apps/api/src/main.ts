@@ -1,4 +1,5 @@
 import cors from 'cors';
+import compression from 'compression';
 import express from 'express';
 import { createServer } from 'node:http';
 import { loginHandler, meHandler, registerHandler, authMiddleware } from './auth/auth.js';
@@ -9,12 +10,15 @@ import { platformRouter } from './platform-routes.js';
 import { v2Router } from './v2-routes.js';
 import { v25Router } from './v25-routes.js';
 import { publicApiRouter } from './public-api/router.js';
+import { pushRouter, liteAware } from './push/service.js';
 import { bindNotificationIo } from './notifications/service.js';
 
 async function main() {
   const app = express();
   app.use(cors({ origin: true, credentials: true }));
+  app.use(compression({ threshold: 512 }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(liteAware);
 
   app.post('/auth/register', registerHandler);
   app.post('/auth/login', loginHandler);
@@ -23,6 +27,7 @@ async function main() {
   app.use('/api', platformRouter);
   app.use('/api', v2Router);
   app.use('/api', v25Router);
+  app.use('/api', pushRouter);
 
   app.get('/public/openapi.json', async (_req, res) => {
     const { readFile } = await import('node:fs/promises');

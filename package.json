@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "NexPlay — plateforme mondiale de jeux compétitifs",
   "workspaces": [
-    "apps/*",
+    "apps/api",
+    "apps/web",
     "packages/*",
     "packages/games/*"
   ],
@@ -13,6 +14,7 @@
     "dev": "npm run build -w @nexplay/game-core && npm run build -w @nexplay/game-ludo && npm run build -w @nexplay/game-dames && concurrently -n api,web -c cyan,magenta \"npm run dev -w @nexplay/api\" \"npm run dev -w @nexplay/web\"",
     "dev:api": "npm run build -w @nexplay/game-core && npm run build -w @nexplay/game-ludo && npm run build -w @nexplay/game-dames && npm run dev -w @nexplay/api",
     "dev:web": "npm run dev -w @nexplay/web",
+    "dev:mobile": "npm --prefix apps/mobile start",
     "test": "npm run test -w @nexplay/game-ludo && npm run test -w @nexplay/game-dames && npm run test -w @nexplay/api",
     "db:push": "npm run db:push -w @nexplay/api",
     "db:seed": "npm run db:seed -w @nexplay/api",

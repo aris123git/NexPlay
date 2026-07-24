@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useNotifications } from '@/lib/notifications';
 import { useI18n } from '@/i18n/provider';
+import { useConnection } from '@/lib/connection';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 
@@ -14,6 +15,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const { unread } = useNotifications();
   const { t, locale, setLocale } = useI18n();
+  const { effectiveLow } = useConnection();
   const [online, setOnline] = useState<number | null>(null);
   const hideNav =
     pathname.startsWith('/match/') ||
@@ -51,6 +53,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {online !== null ? (
             <span className="muted" style={{ fontSize: '0.75rem' }}>
               ● {online} {t('online')}
+            </span>
+          ) : null}
+          {effectiveLow ? (
+            <span className="pill" title="Mode faible connexion">
+              Lite
             </span>
           ) : null}
           <select

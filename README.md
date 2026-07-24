@@ -32,6 +32,16 @@ npm run dev
 - Web : http://localhost:3000
 - API : http://localhost:4000
 
+## V3.5 — PWA & Mobile
+
+PWA installable, mode faible connexion, app Expo — `docs/PLATFORM_V35.md`.
+
+```bash
+# PWA = apps/web (manifest + service worker)
+# Mobile
+cd apps/mobile && npm install && npx expo start
+```
+
 ## V2.6 — Dames + NexPlay ID
 
 Second jeu intégré (`@nexplay/game-dames`) + identifiant officiel joueur — `docs/PLATFORM_V26.md`.

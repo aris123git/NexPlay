@@ -78,3 +78,19 @@ npm run build -w @nexplay/game-dames
 
 Docs : `docs/PLATFORM_V26.md`
 
+## Delta V3.5 — PWA / Mobile / faible connexion
+
+### Tables
+- `PushSubscription` (Web Push / mobile)
+
+### Apps
+- `apps/web` : Service Worker, manifest, offline, mode Lite
+- `apps/mobile` : Expo (React Native) — hors workspaces npm
+
+```bash
+cd apps/api && npx prisma db push && npm run db:seed
+cd apps/mobile && npm install && npx expo start
+```
+
+Docs : `docs/PLATFORM_V35.md`
+

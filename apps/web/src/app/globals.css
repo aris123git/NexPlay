@@ -591,3 +591,22 @@ button {
   }
 }
 
+/* V3.5 — Mode faible connexion */
+body.low-bandwidth .fade-in,
+body.low-bandwidth .waiting {
+  animation: none !important;
+}
+
+body.low-bandwidth .ludo-board,
+body.low-bandwidth .dames-board {
+  box-shadow: none;
+}
+
+body.low-bandwidth .dice.spin {
+  animation: none !important;
+}
+
+body.low-bandwidth {
+  --bg-glow: none;
+}
+

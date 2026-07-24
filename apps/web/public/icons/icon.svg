@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NexPlay">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#163226"/>
+      <stop offset="100%" stop-color="#0b1a14"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#3dba8a" stroke-width="28"/>
+  <path d="M180 300 L256 160 L332 300 Z" fill="#d4a017"/>
+  <circle cx="256" cy="268" r="28" fill="#f3ebe0"/>
+</svg>

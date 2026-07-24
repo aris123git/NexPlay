@@ -36,6 +36,10 @@ Tout le reste (Core / Arena / Esports / Creator) doit fonctionner **sans connaî
 5. Awalé  
 6. Uno  
 
+## V3.5 (mobile & réseaux)
+
+PWA complète, mode faible connexion, Expo Android/iOS — `docs/PLATFORM_V35.md`.
+
 ## V3 (après les jeux)
 
 Matchmaking intelligent, spectateurs, streaming, anti-triche avancé, push mobile, React Native / Flutter, PWA offline.
