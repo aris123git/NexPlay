@@ -70,15 +70,39 @@ export class GameOrchestrator {
       options: { matchId: match.id },
     });
 
-    return prisma.match.update({
+    const updated = await prisma.match.update({
       where: { id: matchId },
       data: {
         status: 'active',
         startedAt: new Date(),
         stateJson: JSON.stringify(state),
       },
-      include: { players: { orderBy: { seat: 'asc' }, include: { user: { include: { profile: true } } } } },
+      include: {
+        players: {
+          orderBy: { seat: 'asc' },
+          include: { user: { include: { profile: true } } },
+        },
+      },
     });
+
+    try {
+      const { setStatus } = await import('../presence/service.js');
+      const { track } = await import('../analytics/service.js');
+      const { getOrCreateMatchChannel } = await import('../chat/service.js');
+      await getOrCreateMatchChannel(matchId);
+      await track('match_start', updated.players[0]?.userId, {
+        matchId,
+        gameId: match.gameId,
+        players: updated.players.length,
+      });
+      for (const p of updated.players) {
+        await setStatus(p.userId, 'in_match', matchId);
+      }
+    } catch {
+      /* best-effort */
+    }
+
+    return updated;
   }
 
   async applyPlayerAction(matchId: string, playerId: string, action: unknown) {
@@ -278,6 +302,41 @@ export class GameOrchestrator {
           : `Résultat enregistré (+${g.coins} NexCoins)`,
         data: { matchId, gameId: match.gameId, result: g.result, coins: g.coins },
       });
+    }
+
+    // V2 hooks — replay + analytics + presence (game-agnostic)
+    try {
+      const { createReplayForMatch } = await import('../replays/service.js');
+      const replay = await createReplayForMatch(matchId);
+      for (const g of coinGrants) {
+        await notify({
+          userId: g.userId,
+          type: 'system',
+          title: 'Replay disponible',
+          body: `Code ${replay.shareCode} — revois ta partie`,
+          data: { matchId, shareCode: replay.shareCode },
+        });
+      }
+    } catch {
+      /* replay best-effort */
+    }
+    try {
+      const { track } = await import('../analytics/service.js');
+      await track('match_end', coinGrants[0]?.userId, {
+        matchId,
+        gameId: match.gameId,
+        players: coinGrants.length,
+      });
+    } catch {
+      /* ignore */
+    }
+    try {
+      const { setStatus } = await import('../presence/service.js');
+      for (const g of coinGrants) {
+        await setStatus(g.userId, 'online');
+      }
+    } catch {
+      /* ignore */
     }
   }
 

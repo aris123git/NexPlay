@@ -113,6 +113,35 @@ async function main() {
   });
 
   console.log('Seed OK — Ludo, saison S2-2026 active, catalogue jeux + e-sport externe');
+
+  // Bootstrap admin (dev) — email configurable via ADMIN_EMAIL
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nexplay.local';
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (!existingAdmin) {
+    const argon2 = await import('argon2');
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash: await argon2.hash('adminadmin'),
+        role: 'admin',
+        profile: {
+          create: {
+            username: 'nexplay_admin',
+            displayName: 'NexPlay Admin',
+            countryCode: 'BF',
+            avatarUrl: 'preset://shield',
+          },
+        },
+        wallet: { create: { nexCoins: 10000 } },
+      },
+    });
+    console.log(`Admin créé: ${adminEmail} / adminadmin`);
+  } else if (existingAdmin.role !== 'admin') {
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: { role: 'admin' },
+    });
+  }
 }
 
 main()

@@ -32,6 +32,15 @@ npm run dev
 - Web : http://localhost:3000
 - API : http://localhost:4000
 
+## V2 — Socle multi-joueurs
+
+Présence, chat, amis, replays, admin, analytics — voir `docs/PLATFORM_V2.md`.
+
+```bash
+cd apps/api && npx prisma db push && npm run db:seed
+# Admin: admin@nexplay.local / adminadmin
+```
+
 ## V1.5 — Fondation compétitive
 
 Avant d’ajouter de nouveaux jeux, le socle plateforme inclut :

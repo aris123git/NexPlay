@@ -3,11 +3,16 @@ import { Server } from 'socket.io';
 import { verifySocketToken } from '../auth/auth.js';
 import { config } from '../config.js';
 import { orchestrator } from '../games/orchestrator.js';
+import * as presence from '../presence/service.js';
+import * as chat from '../chat/service.js';
 
 export function createRealtime(httpServer: HttpServer) {
   const io = new Server(httpServer, {
     cors: { origin: config.corsOrigin, credentials: true },
   });
+
+  presence.bindPresenceIo(io);
+  chat.bindChatIo(io);
 
   io.use((socket, next) => {
     const token =
@@ -23,6 +28,43 @@ export function createRealtime(httpServer: HttpServer) {
   io.on('connection', (socket) => {
     const user = socket.data.user as { id: string; username: string };
     socket.join(`user:${user.id}`);
+    void presence.connectSocket(user.id, user.username, socket.id);
+
+    socket.on('presence:set', async (payload: { status: string; matchId?: string }, ack?) => {
+      const allowed = ['online', 'in_queue', 'in_match', 'offline'] as const;
+      if (!allowed.includes(payload?.status as (typeof allowed)[number])) {
+        ack?.({ ok: false });
+        return;
+      }
+      await presence.setStatus(
+        user.id,
+        payload.status as presence.PresenceStatus,
+        payload.matchId,
+      );
+      ack?.({ ok: true });
+    });
+
+    socket.on('chat:join', (payload: { channelKey: string }, ack?) => {
+      if (!payload?.channelKey) return ack?.({ ok: false });
+      socket.join(`chat:${payload.channelKey}`);
+      ack?.({ ok: true });
+    });
+
+    socket.on(
+      'chat:send',
+      async (payload: { channelId: string; body: string }, ack?) => {
+        try {
+          const msg = await chat.postMessage({
+            channelId: payload.channelId,
+            senderId: user.id,
+            body: payload.body,
+          });
+          ack?.({ ok: true, message: msg });
+        } catch (e) {
+          ack?.({ ok: false, error: (e as Error).message });
+        }
+      },
+    );
 
     socket.on('match:join', async (payload: { matchId: string }, ack?) => {
       try {
@@ -33,7 +75,10 @@ export function createRealtime(httpServer: HttpServer) {
           return;
         }
         socket.join(`match:${payload.matchId}`);
-        ack?.({ ok: true, match });
+        const channel = await chat.getOrCreateMatchChannel(payload.matchId);
+        socket.join(`chat:${channel.key}`);
+        await presence.setStatus(user.id, 'in_match', payload.matchId);
+        ack?.({ ok: true, match, chatChannelId: channel.id, chatKey: channel.key });
         socket.to(`match:${payload.matchId}`).emit('presence:join', {
           userId: user.id,
           username: user.username,
@@ -66,18 +111,28 @@ export function createRealtime(httpServer: HttpServer) {
       }
     });
 
-    socket.on('chat:match', (payload: { matchId: string; text: string }) => {
+    // Legacy match chat → persisted channel
+    socket.on('chat:match', async (payload: { matchId: string; text: string }) => {
       if (!payload?.text || payload.text.length > 300) return;
-      io.to(`match:${payload.matchId}`).emit('chat:match', {
-        userId: user.id,
-        username: user.username,
-        text: payload.text,
-        at: Date.now(),
-      });
+      try {
+        const channel = await chat.getOrCreateMatchChannel(payload.matchId);
+        await chat.postMessage({
+          channelId: channel.id,
+          senderId: user.id,
+          body: payload.text,
+        });
+      } catch {
+        io.to(`match:${payload.matchId}`).emit('chat:match', {
+          userId: user.id,
+          username: user.username,
+          text: payload.text,
+          at: Date.now(),
+        });
+      }
     });
 
     socket.on('disconnect', () => {
-      /* presence cleanup futur */
+      void presence.disconnectSocket(user.id, socket.id);
     });
   });
 

@@ -10,6 +10,7 @@ export type AuthUser = {
   id: string;
   email: string;
   username: string;
+  role?: string;
 };
 
 declare global {
@@ -39,7 +40,12 @@ const loginSchema = z.object({
 
 function signAccess(user: AuthUser): string {
   return jwt.sign(
-    { sub: user.id, email: user.email, username: user.username },
+    {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role ?? 'player',
+    },
     config.jwtSecret,
     { expiresIn: config.accessTokenTtlSec },
   );
@@ -86,9 +92,17 @@ export async function registerHandler(req: Request, res: Response) {
     id: user.id,
     email: user.email,
     username: user.profile!.username,
+    role: user.role,
   };
   const accessToken = signAccess(authUser);
   const refresh = await issueRefresh(user.id);
+
+  try {
+    const { track } = await import('../analytics/service.js');
+    await track('session_start', user.id, { source: 'register' });
+  } catch {
+    /* ignore */
+  }
 
   return res.status(201).json({
     user: publicUser(user),
@@ -106,8 +120,11 @@ export async function loginHandler(req: Request, res: Response) {
     where: { email: parsed.data.email },
     include: { profile: true },
   });
-  if (!user || user.status !== 'active') {
+  if (!user || user.status === 'deleted') {
     return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
+  }
+  if (user.status === 'banned') {
+    return res.status(403).json({ error: 'BANNED', reason: user.banReason });
   }
   const ok = await argon2.verify(user.passwordHash, parsed.data.password);
   if (!ok) return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
@@ -116,10 +133,24 @@ export async function loginHandler(req: Request, res: Response) {
     id: user.id,
     email: user.email,
     username: user.profile!.username,
+    role: user.role,
   };
   const accessToken = signAccess(authUser);
   const refreshToken = await issueRefresh(user.id);
-  return res.json({ user: publicUser(user), accessToken, refreshToken });
+
+  try {
+    const { track } = await import('../analytics/service.js');
+    await track('login', user.id, {});
+    await track('session_start', user.id, { source: 'login' });
+  } catch {
+    /* ignore */
+  }
+
+  return res.json({
+    user: { ...publicUser(user), role: user.role },
+    accessToken,
+    refreshToken,
+  });
 }
 
 async function issueRefresh(userId: string): Promise<string> {
@@ -133,6 +164,7 @@ async function issueRefresh(userId: string): Promise<string> {
 function publicUser(user: {
   id: string;
   email: string;
+  role?: string;
   profile: {
     username: string;
     displayName: string;
@@ -148,6 +180,7 @@ function publicUser(user: {
   return {
     id: user.id,
     email: user.email,
+    role: user.role ?? 'player',
     ...user.profile!,
   };
 }
@@ -163,6 +196,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
       id: String(payload.sub),
       email: String(payload.email),
       username: String(payload.username),
+      role: String(payload.role ?? 'player'),
     };
     next();
   } catch {
@@ -179,6 +213,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
         id: String(payload.sub),
         email: String(payload.email),
         username: String(payload.username),
+        role: String(payload.role ?? 'player'),
       };
     } catch {
       /* ignore */
@@ -194,6 +229,7 @@ export function verifySocketToken(token: string): AuthUser | null {
       id: String(payload.sub),
       email: String(payload.email),
       username: String(payload.username),
+      role: String(payload.role ?? 'player'),
     };
   } catch {
     return null;

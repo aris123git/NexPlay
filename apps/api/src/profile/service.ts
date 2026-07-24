@@ -92,6 +92,7 @@ export async function getFullProfile(userId: string) {
     user: {
       id: user.id,
       email: user.email,
+      role: user.role,
       ...user.profile!,
       level: progress.level,
     },

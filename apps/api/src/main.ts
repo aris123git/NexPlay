@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { createRealtime } from './realtime/gateway.js';
 import { apiRouter } from './api-routes.js';
 import { platformRouter } from './platform-routes.js';
+import { v2Router } from './v2-routes.js';
 import { bindNotificationIo } from './notifications/service.js';
 
 async function main() {
@@ -18,6 +19,7 @@ async function main() {
   app.get('/auth/me', authMiddleware, meHandler);
   app.use('/api', apiRouter);
   app.use('/api', platformRouter);
+  app.use('/api', v2Router);
 
   const httpServer = createServer(app);
   const io = createRealtime(httpServer);

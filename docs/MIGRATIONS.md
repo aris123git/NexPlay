@@ -31,7 +31,20 @@ Production PostgreSQL : générer une migration versionnée
 npx prisma migrate dev --name platform_foundation
 ```
 
-## Non-régression GameModule
+## Delta V2 (présence, social, replays, admin, analytics)
 
-Aucun changement dans `@nexplay/game-core` ni `@nexplay/game-ludo`.
-Les hooks sont uniquement dans `GameOrchestrator.finalizeMatch`.
+### Nouvelles tables
+- `FriendFavorite`
+- `ChatChannel`, `ChatMessage`, `ChatReport`
+- `MatchReplay`, `CheatReport`
+- `AnalyticsEvent`, `AdminAuditLog`
+
+### Enrichissements
+- `User.role`, `bannedAt`, `banReason`
+- `PlayerProfile.presenceStatus`, `lastSeenAt`, `currentMatchId`
+
+```bash
+cd apps/api && npx prisma db push && npm run db:seed
+```
+
+Admin seed : `admin@nexplay.local` / `adminadmin`

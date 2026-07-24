@@ -88,6 +88,10 @@ button {
   bottom: 0;
 }
 
+.nav-tabs.five {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .nav-tabs a {
   text-align: center;
   padding: 0.65rem 0.25rem;

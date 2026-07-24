@@ -13,18 +13,25 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
-  status       String   @default("active")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  /// active | banned | deleted
+  status       String    @default("active")
+  /// player | moderator | admin
+  role         String    @default("player")
+  bannedAt     DateTime?
+  banReason    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   profile              PlayerProfile?
   wallet               Wallet?
   refreshTokens        RefreshToken[]
   friendshipsOut       Friendship[]        @relation("FriendshipRequester")
   friendshipsIn        Friendship[]        @relation("FriendshipAddressee")
+  favorites            FriendFavorite[]    @relation("FavoriteOwner")
+  favoritedBy          FriendFavorite[]    @relation("FavoriteTarget")
   ownedClans           Clan[]              @relation("ClanOwner")
   clanMembers          ClanMember[]
   matchPlayers         MatchPlayer[]
@@ -39,20 +46,29 @@ model User {
   matchInvitesReceived MatchInvite[]       @relation("InviteTo")
   walletLedger         WalletTransaction[]
   externalResults      ExternalResult[]    @relation("ExternalSubmitter")
+  chatMessages         ChatMessage[]
+  chatReports          ChatReport[]        @relation("ChatReporter")
+  analyticsEvents      AnalyticsEvent[]
+  adminAudits          AdminAuditLog[]     @relation("AdminActor")
+  cheatReports         CheatReport[]       @relation("CheatReporter")
 }
 
 model PlayerProfile {
-  userId      String  @id
-  username    String  @unique
+  userId      String    @id
+  username    String    @unique
   displayName String
   /// preset://lion | https://... | null
   avatarUrl   String?
-  countryCode String  @default("BF")
-  locale      String  @default("fr-BF")
-  currency    String  @default("XOF")
-  level       Int     @default(1)
-  xp          Int     @default(0)
+  countryCode String    @default("BF")
+  locale      String    @default("fr-BF")
+  currency    String    @default("XOF")
+  level       Int       @default(1)
+  xp          Int       @default(0)
   bio         String?
+  /// offline | online | in_match | in_queue
+  presenceStatus String @default("offline")
+  lastSeenAt  DateTime?
+  currentMatchId String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -156,8 +172,9 @@ model Clan {
   createdAt   DateTime @default(now())
 
   owner   User               @relation("ClanOwner", fields: [ownerId], references: [id])
-  members ClanMember[]
-  entries TournamentEntry[]
+  members  ClanMember[]
+  entries  TournamentEntry[]
+  channels ChatChannel[]
 }
 
 model ClanMember {
@@ -208,6 +225,8 @@ model Match {
   tournamentMatch TournamentMatch? @relation(fields: [tournamentMatchId], references: [id])
   players         MatchPlayer[]
   moves           MatchMove[]
+  replay          MatchReplay?
+  cheatReports    CheatReport[]
 }
 
 model MatchPlayer {
@@ -337,9 +356,10 @@ model Tournament {
   startsAt     DateTime?
   endsAt       DateTime?
 
-  season  Season?           @relation(fields: [seasonId], references: [id])
-  entries TournamentEntry[]
-  rounds  TournamentMatch[]
+  season   Season?           @relation(fields: [seasonId], references: [id])
+  entries  TournamentEntry[]
+  rounds   TournamentMatch[]
+  channels ChatChannel[]
 }
 
 model TournamentEntry {
@@ -389,4 +409,120 @@ model ExternalResult {
   createdAt         DateTime @default(now())
 
   submitter User @relation("ExternalSubmitter", fields: [submittedById], references: [id])
+}
+
+
+// ——— V2 : Social, Presence helpers, Chat, Replays, Admin, Analytics ———
+
+model FriendFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("FavoriteOwner", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FavoriteTarget", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+}
+
+model ChatChannel {
+  id        String   @id @default(cuid())
+  /// dm | clan | tournament | match | global
+  type      String
+  /// Unique routing key e.g. dm:a:b | clan:xyz
+  key       String   @unique
+  title     String?
+  clanId    String?
+  tournamentId String?
+  matchId   String?
+  createdAt DateTime @default(now())
+
+  clan       Clan?         @relation(fields: [clanId], references: [id])
+  tournament Tournament?   @relation(fields: [tournamentId], references: [id])
+  messages   ChatMessage[]
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  channelId String
+  senderId  String
+  body      String
+  /// plain | emoji
+  kind      String    @default("plain")
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  deletedBy String?
+
+  channel ChatChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender  User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reports ChatReport[]
+
+  @@index([channelId, createdAt])
+}
+
+model ChatReport {
+  id         String   @id @default(cuid())
+  messageId  String
+  reporterId String
+  reason     String
+  status     String   @default("open") // open | reviewed | actioned | dismissed
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  message  ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporter User        @relation("ChatReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+}
+
+model MatchReplay {
+  id         String   @id @default(cuid())
+  matchId    String   @unique
+  gameId     String
+  shareCode  String   @unique
+  isPublic   Boolean  @default(true)
+  views      Int      @default(0)
+  durationMs Int?
+  metaJson   String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model CheatReport {
+  id         String   @id @default(cuid())
+  matchId    String
+  reporterId String
+  reason     String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+
+  match    Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reporter User  @relation("CheatReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  propsJson String   @default("{}")
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  targetType String?
+  targetId  String?
+  metaJson  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  actor User @relation("AdminActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }

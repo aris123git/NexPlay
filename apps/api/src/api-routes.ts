@@ -73,6 +73,12 @@ apiRouter.post('/matchmaking/queue', authMiddleware, async (req, res) => {
   };
 
   const { ready } = matchmaking.enqueue(ticket);
+  try {
+    const { setStatus } = await import('./presence/service.js');
+    await setStatus(req.user!.id, 'in_queue');
+  } catch {
+    /* ignore */
+  }
   if (!ready) {
     return res.json({ status: 'queued', ticket });
   }
@@ -96,8 +102,14 @@ apiRouter.post('/matchmaking/queue', authMiddleware, async (req, res) => {
   return res.json({ status: 'matched', match: publicMatch });
 });
 
-apiRouter.delete('/matchmaking/queue', authMiddleware, (req, res) => {
+apiRouter.delete('/matchmaking/queue', authMiddleware, async (req, res) => {
   matchmaking.cancel(req.user!.id);
+  try {
+    const { setStatus } = await import('./presence/service.js');
+    await setStatus(req.user!.id, 'online');
+  } catch {
+    /* ignore */
+  }
   res.json({ status: 'cancelled' });
 });
 
