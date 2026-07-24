@@ -3,6 +3,7 @@ import { ensureWallet } from '../wallet/service.js';
 import { getActiveSeason } from '../seasons/service.js';
 import { getUserClan } from '../clans/service.js';
 import { unreadCount } from '../notifications/service.js';
+import { nexplayTag } from '../identity/nexplay-id.js';
 
 const AVATAR_PRESETS = [
   'lion',
@@ -95,6 +96,9 @@ export async function getFullProfile(userId: string) {
       role: user.role,
       ...user.profile!,
       level: progress.level,
+      nexplayTag: user.profile!.nexplayId
+        ? nexplayTag(user.profile!.username, user.profile!.nexplayId)
+        : `${user.profile!.username}#0000`,
     },
     xp: progress,
     wallet: { nexCoins: user.wallet?.nexCoins ?? 0 },
