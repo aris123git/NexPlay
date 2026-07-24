@@ -177,3 +177,16 @@ Livré dans `docs/PLATFORM_FOUNDATION.md` :
 - Profil enrichi (historique, winrate, badges, XP bar, avatar presets)
 
 **GameModule non modifié** — hooks dans `GameOrchestrator.finalizeMatch` uniquement.
+
+---
+
+## 8. V2 — Échelle multi-joueurs
+
+Livré dans `docs/PLATFORM_V2.md` :
+
+- Presence (online / in_match / in_queue / lastSeen / compteur live)
+- Chat (DM, clan, tournoi, match + emojis + signalement)
+- Amis (invite, favoris, blocage, rejoindre un ami)
+- Replays auto + share code + report triche
+- Back-office admin (bans, rewards, saisons, modération)
+- Analytics (durée, top jeux, pays, rétention J1/J7/J30)
