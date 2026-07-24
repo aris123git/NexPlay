@@ -25,4 +25,22 @@ Public API        ──► lecture catalogue / leaderboards / tournois
 
 Aucun déséquilibre compétitif : **pas de pay-to-win**.
 
-Voir aussi `docs/MODULES.md` (vision produit long terme).
+## Endpoints internes (`/api`)
+
+| Zone | Chemins |
+|------|---------|
+| i18n | `GET /i18n/catalog`, `PATCH /i18n/preferences` |
+| Rankings | `GET /rankings/game/:gameId`, `/rankings/season/active`, `/rankings/clans` |
+| Shop | `GET /shop`, `POST /shop/purchase`, `POST /shop/equip` |
+| Events | `GET /events/challenges`, `POST /events/challenges/:id/claim` |
+| Developer | `POST /developer/keys` |
+
+## UI
+
+`/shop`, `/events`, `/leaderboard`, `/settings` + sélecteur de langue (FR/EN/AR/PT/ES, RTL arabe).
+
+## Docs liées
+
+- `docs/MODULES.md` — vision Core / Games / Arena / Esports / Creator / Studio
+- `docs/PUBLIC_API.md` + `docs/openapi-public.json`
+- Roadmap jeux **après** V2.5 : Dames → Échecs → Dominos → Awalé → Uno

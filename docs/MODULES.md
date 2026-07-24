@@ -27,13 +27,14 @@ NexPlay n’est plus « une app Ludo » : c’est un **écosystème de modules**
 
 Tout le reste (Core / Arena / Esports / Creator) doit fonctionner **sans connaître les règles** du jeu.
 
-## Roadmap jeux (après V2.5)
+## Roadmap jeux
 
-1. Dames  
-2. Échecs (ELO crédibilité)  
-3. Dominos  
-4. Awalé  
-5. Uno  
+1. ✅ Ludo  
+2. ✅ Dames (v2.6)  
+3. Échecs (ELO crédibilité)  
+4. Dominos  
+5. Awalé  
+6. Uno  
 
 ## V3 (après les jeux)
 

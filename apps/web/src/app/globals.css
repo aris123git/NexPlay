@@ -504,6 +504,85 @@ button {
   transition: width 0.35s ease;
 }
 
+/* Dames board */
+.dames-wrap {
+  width: 100%;
+}
+
+.dames-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(243, 235, 224, 0.12);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.25);
+}
+
+.dames-sq {
+  aspect-ratio: 1;
+  border: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  cursor: default;
+}
+
+.dames-sq.light {
+  background: #d9c7a3;
+}
+
+.dames-sq.dark {
+  background: #3d5c4a;
+}
+
+.dames-sq.pickable {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(61, 186, 138, 0.55);
+}
+
+.dames-sq.selected {
+  box-shadow: inset 0 0 0 3px var(--gold);
+}
+
+.dames-sq.target {
+  cursor: pointer;
+  background: #4a7a5c;
+}
+
+.dames-piece {
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.dames-piece.dark {
+  background: radial-gradient(circle at 30% 28%, #5a5a5a, #1a1a1a 70%);
+  color: #d4a017;
+}
+
+.dames-piece.light {
+  background: radial-gradient(circle at 30% 28%, #fff8ec, #cfc0a4 75%);
+}
+
+.dames-piece.king {
+  outline: 2px solid rgba(212, 160, 23, 0.7);
+}
+
+.dames-dot {
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: rgba(243, 235, 224, 0.55);
+}
+
 @media (min-width: 768px) {
   .app-shell {
     max-width: 520px;

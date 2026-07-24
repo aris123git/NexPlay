@@ -60,6 +60,8 @@ model PlayerProfile {
   userId      String    @id
   username    String    @unique
   displayName String
+  /// Identifiant officiel NexPlay — NXP-XXXX-XXXX (généré à l’inscription)
+  nexplayId   String?   @unique
   /// preset://lion | https://... | null
   avatarUrl   String?
   countryCode String    @default("BF")

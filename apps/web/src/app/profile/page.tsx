@@ -122,6 +122,14 @@ export default function ProfilePage() {
           <p className="muted" style={{ margin: '0.2rem 0' }}>
             {flag(u.countryCode)} @{u.username} · Nv.{me?.xp.level ?? u.level}
           </p>
+          {(u as { nexplayId?: string; nexplayTag?: string }).nexplayId ? (
+            <p className="muted" style={{ margin: '0.15rem 0', fontSize: '0.85rem' }}>
+              <strong style={{ color: 'var(--cream)' }}>
+                {(u as { nexplayTag?: string }).nexplayTag ?? u.username}
+              </strong>
+              <span> · {(u as { nexplayId?: string }).nexplayId}</span>
+            </p>
+          ) : null}
           <div className="xp-bar" aria-label="Progression XP">
             <div style={{ width: `${(me?.xp.ratio ?? 0) * 100}%` }} />
           </div>

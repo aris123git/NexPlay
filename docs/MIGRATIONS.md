@@ -61,4 +61,20 @@ cd apps/api && npx prisma db push && npm run db:seed
 cd apps/api && npx prisma db push && npm run db:seed
 ```
 
-Docs : `docs/PLATFORM_V25.md`, `docs/MODULES.md`, `docs/PUBLIC_API.md`
+## Delta V2.6 — Dames + NexPlay ID
+
+### NexPlay ID
+- `PlayerProfile.nexplayId` unique (`NXP-XXXX-XXXX`)
+- Tag affiché `username#XXXX` dérivé de l’ID
+
+### Jeu Dames
+- Package `@nexplay/game-dames` (GameModule)
+- Catalogue `game_definitions` id=`dames` activé
+
+```bash
+cd apps/api && npx prisma db push && npm run db:seed
+npm run build -w @nexplay/game-dames
+```
+
+Docs : `docs/PLATFORM_V26.md`
+

@@ -39,7 +39,7 @@ export default function HomePage() {
       <div>
         {[
           { id: 'LU', name: 'Ludo', status: 'Live', ok: true },
-          { id: 'DA', name: 'Dames', status: 'Roadmap', ok: false },
+          { id: 'DA', name: 'Dames', status: 'Live', ok: true },
           { id: 'ÉC', name: 'Échecs', status: 'Roadmap', ok: false },
           { id: 'DO', name: 'Dominos', status: 'Roadmap', ok: false },
           { id: 'AW', name: 'Awalé', status: 'Roadmap', ok: false },

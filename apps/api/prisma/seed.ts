@@ -1,31 +1,50 @@
 import { PrismaClient } from '@prisma/client';
 import { ludoModule } from '@nexplay/game-ludo';
+import { damesModule } from '@nexplay/game-dames';
+import { generateNexplayId } from '../src/identity/nexplay-id.js';
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function upsertIntegrated(mod: {
+  id: string;
+  name: string;
+  minPlayers: number;
+  maxPlayers: number;
+  modes: unknown;
+}) {
   await prisma.gameDefinition.upsert({
-    where: { id: ludoModule.id },
+    where: { id: mod.id },
     create: {
-      id: ludoModule.id,
-      name: ludoModule.name,
-      minPlayers: ludoModule.minPlayers,
-      maxPlayers: ludoModule.maxPlayers,
+      id: mod.id,
+      name: mod.name,
+      minPlayers: mod.minPlayers,
+      maxPlayers: mod.maxPlayers,
       kind: 'INTEGRATED',
       isEnabled: true,
-      configJson: JSON.stringify({ modes: ludoModule.modes }),
+      configJson: JSON.stringify({ modes: mod.modes }),
     },
     update: {
-      name: ludoModule.name,
-      minPlayers: ludoModule.minPlayers,
-      maxPlayers: ludoModule.maxPlayers,
-      configJson: JSON.stringify({ modes: ludoModule.modes }),
+      name: mod.name,
+      minPlayers: mod.minPlayers,
+      maxPlayers: mod.maxPlayers,
+      configJson: JSON.stringify({ modes: mod.modes }),
       isEnabled: true,
+      kind: 'INTEGRATED',
     },
+  });
+}
+
+async function main() {
+  await upsertIntegrated(ludoModule);
+  await upsertIntegrated(damesModule);
+
+  // Ancien id catalogue « checkers » → désactivé au profit de dames
+  await prisma.gameDefinition.updateMany({
+    where: { id: 'checkers' },
+    data: { isEnabled: false },
   });
 
   const future = [
-    { id: 'checkers', name: 'Dames', min: 2, max: 2 },
     { id: 'chess', name: 'Échecs', min: 2, max: 2 },
     { id: 'awale', name: 'Awalé', min: 2, max: 2 },
     { id: 'domino', name: 'Dominos', min: 2, max: 4 },
@@ -70,6 +89,11 @@ async function main() {
       name: 'Fondateur de clan',
       description: 'Créez un clan NexPlay',
     },
+    {
+      code: 'dames_first_win',
+      name: 'Roi des dames',
+      description: 'Gagnez votre première partie de Dames',
+    },
   ];
   for (const b of badges) {
     await prisma.badge.upsert({
@@ -79,7 +103,6 @@ async function main() {
     });
   }
 
-  // Saison active couvrant la date courante (2026)
   const startsAt = new Date('2026-07-01T00:00:00.000Z');
   const endsAt = new Date('2026-09-30T23:59:59.000Z');
   await prisma.season.upsert({
@@ -98,7 +121,6 @@ async function main() {
     update: { status: 'active', name: 'Saison 2 — Hivernage', startsAt, endsAt },
   });
 
-  // Saison 1 archivée
   await prisma.season.upsert({
     where: { code: 'S1-2026' },
     create: {
@@ -112,11 +134,13 @@ async function main() {
     update: { status: 'completed' },
   });
 
-  console.log('Seed OK — Ludo, saison S2-2026 active, catalogue jeux + e-sport externe');
+  console.log('Seed OK — Ludo + Dames, saison S2-2026, catalogue');
 
-  // Bootstrap admin (dev) — email configurable via ADMIN_EMAIL
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nexplay.local';
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail },
+    include: { profile: true },
+  });
   if (!existingAdmin) {
     const argon2 = await import('argon2');
     await prisma.user.create({
@@ -128,6 +152,7 @@ async function main() {
           create: {
             username: 'nexplay_admin',
             displayName: 'NexPlay Admin',
+            nexplayId: generateNexplayId(),
             countryCode: 'BF',
             continentCode: 'AF',
             timezone: 'Africa/Ouagadougou',
@@ -145,11 +170,30 @@ async function main() {
     });
   }
 
+  // Backfill NexPlay ID pour profils existants
+  const allProfiles = await prisma.playerProfile.findMany({
+    select: { userId: true, nexplayId: true },
+  });
+  for (const p of allProfiles) {
+    if (!p.nexplayId || !/^NXP-[0-9A-F]{4}-[0-9A-F]{4}$/i.test(p.nexplayId)) {
+      let id = generateNexplayId();
+      for (let i = 0; i < 5; i++) {
+        const clash = await prisma.playerProfile.findUnique({ where: { nexplayId: id } });
+        if (!clash) break;
+        id = generateNexplayId();
+      }
+      await prisma.playerProfile.update({
+        where: { userId: p.userId },
+        data: { nexplayId: id },
+      });
+    }
+  }
+
   const { seedShopCatalog } = await import('../src/shop/service.js');
   const { seedChallenges } = await import('../src/events/service.js');
   await seedShopCatalog();
   await seedChallenges();
-  console.log('Shop + défis quotidiens/hebdo seedés');
+  console.log('Shop + défis seedés · NexPlay IDs OK');
 }
 
 main()

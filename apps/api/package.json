@@ -14,6 +14,7 @@
   "dependencies": {
     "@nexplay/game-core": "*",
     "@nexplay/game-ludo": "*",
+    "@nexplay/game-dames": "*",
     "@prisma/client": "^6.5.0",
     "argon2": "^0.41.1",
     "cors": "^2.8.5",

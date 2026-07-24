@@ -6,26 +6,56 @@ import { Shell } from '@/components/Shell';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
+const GAMES = [
+  {
+    id: 'ludo',
+    name: 'Ludo',
+    blurb: '2 à 4 joueurs · dés sécurisés',
+    counts: [2, 3, 4],
+  },
+  {
+    id: 'dames',
+    name: 'Dames',
+    blurb: '1v1 · plateau 8×8 · ELO',
+    counts: [2],
+  },
+] as const;
+
 export default function PlayPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
+  const [gameId, setGameId] = useState<(typeof GAMES)[number]['id']>('ludo');
   const [playerCount, setPlayerCount] = useState(2);
   const [status, setStatus] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const game = GAMES.find((g) => g.id === gameId)!;
+
   useEffect(() => {
     if (!loading && !session) router.replace('/auth');
   }, [loading, session, router]);
 
-  if (!session) return <Shell><p className="muted">Chargement…</p></Shell>;
+  useEffect(() => {
+    if (!(game.counts as readonly number[]).includes(playerCount)) {
+      setPlayerCount(game.counts[0]!);
+    }
+  }, [gameId, game.counts, playerCount]);
+
+  if (!session) {
+    return (
+      <Shell>
+        <p className="muted">Chargement…</p>
+      </Shell>
+    );
+  }
 
   async function queuePublic() {
     setBusy(true);
     setStatus('Recherche d’adversaires…');
     try {
-      const mode = `public-${playerCount}`;
+      const mode = gameId === 'dames' ? 'public-2' : `public-${playerCount}`;
       const res = await api<{
         status: string;
         match?: { id: string };
@@ -33,9 +63,9 @@ export default function PlayPage() {
         method: 'POST',
         token: session!.accessToken,
         body: JSON.stringify({
-          gameId: 'ludo',
+          gameId,
           mode,
-          playerCount,
+          playerCount: gameId === 'dames' ? 2 : playerCount,
           region: 'bf-ouaga',
         }),
       });
@@ -43,8 +73,7 @@ export default function PlayPage() {
         router.push(`/match/${res.match.id}`);
         return;
       }
-      setStatus('En file d’attente — relancez quand un ami s’inscrit, ou créez une partie privée.');
-      // Simple poll: try again shortly for demo with 2 accounts
+      setStatus('En file d’attente — un second joueur doit rejoindre la même file.');
       const poll = setInterval(async () => {
         try {
           const again = await api<{ status: string; match?: { id: string } }>(
@@ -53,9 +82,9 @@ export default function PlayPage() {
               method: 'POST',
               token: session!.accessToken,
               body: JSON.stringify({
-                gameId: 'ludo',
+                gameId,
                 mode,
-                playerCount,
+                playerCount: gameId === 'dames' ? 2 : playerCount,
                 region: 'bf-ouaga',
               }),
             },
@@ -85,9 +114,9 @@ export default function PlayPage() {
           method: 'POST',
           token: session!.accessToken,
           body: JSON.stringify({
-            gameId: 'ludo',
-            mode: `private-${playerCount}`,
-            playerCount,
+            gameId,
+            mode: gameId === 'dames' ? 'private-2' : `private-${playerCount}`,
+            playerCount: gameId === 'dames' ? 2 : playerCount,
           }),
         },
       );
@@ -119,24 +148,41 @@ export default function PlayPage() {
   return (
     <Shell>
       <h1 className="hero-title" style={{ fontSize: '2rem' }}>
-        Ludo
+        Jouer
       </h1>
-      <p className="lede">
-        Matchmaking public ou partie privée entre amis. 2, 3 ou 4 joueurs.
-      </p>
+      <p className="lede">Choisissez un jeu, puis une partie publique ou privée.</p>
 
-      <div className="field">
-        <label htmlFor="pc">Nombre de joueurs</label>
-        <select
-          id="pc"
-          value={playerCount}
-          onChange={(e) => setPlayerCount(Number(e.target.value))}
-        >
-          <option value={2}>2 joueurs</option>
-          <option value={3}>3 joueurs</option>
-          <option value={4}>4 joueurs</option>
-        </select>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {GAMES.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            className={`btn ${gameId === g.id ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ width: 'auto', padding: '0.45rem 0.85rem' }}
+            onClick={() => setGameId(g.id)}
+          >
+            {g.name}
+          </button>
+        ))}
       </div>
+      <p className="muted">{game.blurb}</p>
+
+      {game.counts.length > 1 ? (
+        <div className="field">
+          <label htmlFor="pc">Nombre de joueurs</label>
+          <select
+            id="pc"
+            value={playerCount}
+            onChange={(e) => setPlayerCount(Number(e.target.value))}
+          >
+            {game.counts.map((n) => (
+              <option key={n} value={n}>
+                {n} joueurs
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="stack">
         <button className="btn btn-primary waiting" disabled={busy} onClick={queuePublic}>
@@ -164,11 +210,19 @@ export default function PlayPage() {
           maxLength={6}
         />
       </div>
-      <button className="btn btn-secondary" disabled={busy || joinCode.length < 4} onClick={joinPrivate}>
+      <button
+        className="btn btn-secondary"
+        disabled={busy || joinCode.length < 4}
+        onClick={joinPrivate}
+      >
         Rejoindre
       </button>
 
-      {status ? <p className="muted" style={{ marginTop: '1rem' }}>{status}</p> : null}
+      {status ? (
+        <p className="muted" style={{ marginTop: '1rem' }}>
+          {status}
+        </p>
+      ) : null}
     </Shell>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { LudoBoard } from '@/games/ludo/LudoBoard';
+import { DamesBoard } from '@/games/dames/DamesBoard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getSocket } from '@/lib/socket';
@@ -12,11 +13,17 @@ type MatchPayload = {
   id: string;
   status: string;
   gameId: string;
-  state: LudoPublicState | null;
+  state: Record<string, unknown> | null;
   players: {
     userId: string;
     seat: number;
-    user: { profile: { username: string; displayName: string } | null };
+    user: {
+      profile: {
+        username: string;
+        displayName: string;
+        nexplayId?: string;
+      } | null;
+    };
   }[];
 };
 
@@ -34,6 +41,16 @@ type LudoPublicState = {
   turnNumber: number;
 };
 
+type DamesPublicState = {
+  board: ({ side: 'dark' | 'light'; king: boolean } | null)[];
+  currentSide: 'dark' | 'light';
+  sides: { dark: string; light: string };
+  continueFrom: number | null;
+  status: string;
+  turnNumber: number;
+  winnerId: string | null;
+};
+
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
   const { session, loading } = useAuth();
@@ -43,6 +60,8 @@ export default function MatchPage() {
   const [chat, setChat] = useState<{ username: string; text: string }[]>([]);
   const [msg, setMsg] = useState('');
   const [diceAnim, setDiceAnim] = useState(false);
+  const [damesSelected, setDamesSelected] = useState<number | null>(null);
+  const [damesLegal, setDamesLegal] = useState<{ from: number; to: number }[]>([]);
 
   useEffect(() => {
     if (!loading && !session) router.replace('/auth');
@@ -65,15 +84,17 @@ export default function MatchPage() {
 
     const socket = getSocket(session.accessToken);
     socket.emit('match:join', { matchId: id }, (ack: { ok: boolean; match?: MatchPayload }) => {
-      if (ack?.ok && ack.match) setMatch(ack.match as MatchPayload);
+      if (ack?.ok && ack.match) setMatch(ack.match);
     });
 
     const onUpdate = (payload: {
-      state: LudoPublicState;
+      state: Record<string, unknown>;
       events: { type: string }[];
       finished?: boolean;
     }) => {
-      setMatch((m) => (m ? { ...m, state: payload.state, status: payload.finished ? 'finished' : m.status } : m));
+      setMatch((m) =>
+        m ? { ...m, state: payload.state, status: payload.finished ? 'finished' : m.status } : m,
+      );
       if (payload.events?.some((e) => e.type === 'dice')) {
         setDiceAnim(true);
         setTimeout(() => setDiceAnim(false), 400);
@@ -108,20 +129,55 @@ export default function MatchPage() {
     return match.players.find((p) => p.userId === session.user.id)?.seat ?? -1;
   }, [match, session]);
 
-  const isMyTurn = match?.state?.currentSeat === meSeat && match.status === 'active';
+  const ludoState = match?.gameId === 'ludo' ? (match.state as LudoPublicState | null) : null;
+  const damesState = match?.gameId === 'dames' ? (match.state as DamesPublicState | null) : null;
 
-  async function sendAction(action: { type: string; tokenIndex?: number }) {
+  const isMyTurnLudo =
+    !!ludoState && ludoState.currentSeat === meSeat && match?.status === 'active';
+
+  // Refresh legal moves for dames via lightweight client mirror of current turn pieces
+  useEffect(() => {
+    if (!damesState || !session || match?.status !== 'active') {
+      setDamesLegal([]);
+      return;
+    }
+    // Ask server by probing — use getLegal from state heuristically via empty action ack is overkill;
+    // compute from exposed state: we request legal via a dedicated field if present, else fetch match moves hint.
+    // Client-side: mark all own pieces as selectable sources; server validates.
+    const mySide =
+      damesState.sides.dark === session.user.id
+        ? 'dark'
+        : damesState.sides.light === session.user.id
+          ? 'light'
+          : null;
+    if (!mySide || damesState.currentSide !== mySide) {
+      setDamesLegal([]);
+      setDamesSelected(null);
+      return;
+    }
+    // Build candidate moves locally (same rules as engine subset)
+    const legal = computeClientLegal(damesState, mySide);
+    setDamesLegal(legal);
+  }, [damesState, session, match?.status]);
+
+  function sendAction(action: Record<string, unknown>) {
     if (!session) return;
     const socket = getSocket(session.accessToken);
     socket.emit(
       'match:action',
       { matchId: id, action },
-      (ack: { ok: boolean; message?: string; state?: LudoPublicState; finished?: boolean }) => {
+      (ack: {
+        ok: boolean;
+        message?: string;
+        state?: Record<string, unknown>;
+        finished?: boolean;
+      }) => {
         if (!ack?.ok) {
           setError(ack?.message ?? 'Action refusée');
           return;
         }
         setError('');
+        setDamesSelected(null);
         if (ack.state) {
           setMatch((m) =>
             m
@@ -135,6 +191,22 @@ export default function MatchPage() {
         }
       },
     );
+  }
+
+  function onDamesSquare(i: number) {
+    if (!damesState || !session) return;
+    if (damesSelected !== null) {
+      const hit = damesLegal.find((m) => m.from === damesSelected && m.to === i);
+      if (hit) {
+        sendAction({ type: 'move', from: hit.from, to: hit.to });
+        return;
+      }
+    }
+    if (damesLegal.some((m) => m.from === i)) {
+      setDamesSelected(i);
+      return;
+    }
+    setDamesSelected(null);
   }
 
   function sendChat() {
@@ -151,26 +223,34 @@ export default function MatchPage() {
     );
   }
 
-  const state = match.state;
+  const gameTitle = match.gameId === 'dames' ? 'Dames' : 'Ludo';
 
   return (
     <Shell>
       <div className="hud">
         <div>
           <div className="section-label" style={{ margin: 0 }}>
-            {match.status === 'waiting' ? 'En attente de joueurs' : 'Partie Ludo'}
+            {match.status === 'waiting' ? 'En attente de joueurs' : `Partie ${gameTitle}`}
           </div>
           <strong>
-            {state
-              ? `Tour ${state.turnNumber} · ${
-                  match.players[state.currentSeat]?.user.profile?.username ?? '…'
+            {ludoState
+              ? `Tour ${ludoState.turnNumber} · ${
+                  match.players[ludoState.currentSeat]?.user.profile?.username ?? '…'
                 }`
-              : `${match.players.length} joueur(s)`}
+              : damesState
+                ? `Tour ${damesState.turnNumber} · ${
+                    damesState.currentSide === 'dark' ? 'Noirs' : 'Blancs'
+                  }`
+                : `${match.players.length} joueur(s)`}
           </strong>
         </div>
-        <div className={`dice ${diceAnim ? 'spin' : ''}`}>
-          {state?.pendingDice?.value ?? '·'}
-        </div>
+        {match.gameId === 'ludo' ? (
+          <div className={`dice ${diceAnim ? 'spin' : ''}`}>
+            {ludoState?.pendingDice?.value ?? '·'}
+          </div>
+        ) : (
+          <div className="dice">♛</div>
+        )}
       </div>
 
       {match.status === 'waiting' ? (
@@ -179,33 +259,52 @@ export default function MatchPage() {
         </p>
       ) : null}
 
-      {state ? (
+      {ludoState ? (
         <LudoBoard
-          state={state}
+          state={ludoState}
           myPlayerId={session.user.id}
           onSelectToken={(tokenIndex) => sendAction({ type: 'move', tokenIndex })}
         />
       ) : null}
 
+      {damesState ? (
+        <DamesBoard
+          state={damesState}
+          myPlayerId={session.user.id}
+          legalMoves={damesLegal}
+          selected={damesSelected}
+          onSelectSquare={onDamesSquare}
+        />
+      ) : null}
+
       <div className="stack" style={{ marginTop: '1rem' }}>
-        {isMyTurn && !state?.pendingDice ? (
+        {isMyTurnLudo && !ludoState?.pendingDice ? (
           <button className="btn btn-primary" onClick={() => sendAction({ type: 'roll' })}>
             Lancer le dé
           </button>
         ) : null}
-        {isMyTurn && state?.pendingDice ? (
+        {isMyTurnLudo && ludoState?.pendingDice ? (
           <p className="muted">Sélectionnez un pion mis en évidence, ou passez s’il n’y a pas de coup.</p>
         ) : null}
-        {isMyTurn && state?.pendingDice ? (
+        {isMyTurnLudo && ludoState?.pendingDice ? (
           <button className="btn btn-secondary" onClick={() => sendAction({ type: 'pass' })}>
             Passer (aucun coup)
           </button>
         ) : null}
         {match.status === 'finished' ? (
           <p className="lede">
-            Partie terminée — vainqueur :{' '}
-            {match.players.find((p) => p.userId === state?.finishedOrder?.[0])?.user.profile
-              ?.username ?? '—'}
+            Partie terminée
+            {damesState?.winnerId
+              ? ` — vainqueur : ${
+                  match.players.find((p) => p.userId === damesState.winnerId)?.user.profile
+                    ?.username ?? '—'
+                }`
+              : ludoState
+                ? ` — vainqueur : ${
+                    match.players.find((p) => p.userId === ludoState.finishedOrder?.[0])?.user
+                      .profile?.username ?? '—'
+                  }`
+                : ''}
           </p>
         ) : null}
         {error ? <p className="error">{error}</p> : null}
@@ -214,10 +313,15 @@ export default function MatchPage() {
       <p className="section-label">Joueurs</p>
       {match.players.map((p) => (
         <div className="game-row" key={p.userId}>
-          <div className={`game-icon`}>{['R', 'V', 'J', 'B'][p.seat]}</div>
+          <div className="game-icon">
+            {match.gameId === 'dames' ? (p.seat === 0 ? '●' : '○') : ['R', 'V', 'J', 'B'][p.seat]}
+          </div>
           <div className="game-meta">
             <strong>{p.user.profile?.displayName ?? p.userId}</strong>
-            <span>@{p.user.profile?.username}</span>
+            <span>
+              @{p.user.profile?.username}
+              {p.user.profile?.nexplayId ? ` · ${p.user.profile.nexplayId}` : ''}
+            </span>
           </div>
         </div>
       ))}
@@ -250,4 +354,77 @@ export default function MatchPage() {
       </div>
     </Shell>
   );
+}
+
+/** Miroir client des règles (le serveur valide toujours). */
+function computeClientLegal(
+  state: DamesPublicState,
+  side: 'dark' | 'light',
+): { from: number; to: number }[] {
+  const board = state.board;
+  const jumps: { from: number; to: number }[] = [];
+  const quiet: { from: number; to: number }[] = [];
+
+  const dirsAll: [number, number][] = [
+    [-1, -1],
+    [-1, 1],
+    [1, -1],
+    [1, 1],
+  ];
+
+  function rowOf(i: number) {
+    return Math.floor(i / 8);
+  }
+  function colOf(i: number) {
+    return i % 8;
+  }
+  function inB(r: number, c: number) {
+    return r >= 0 && r < 8 && c >= 0 && c < 8;
+  }
+
+  const fromFilter =
+    state.continueFrom !== null
+      ? [state.continueFrom]
+      : board.map((p, i) => (p?.side === side ? i : -1)).filter((i) => i >= 0);
+
+  for (const from of fromFilter) {
+    const piece = board[from];
+    if (!piece) continue;
+    const r = rowOf(from);
+    const c = colOf(from);
+    for (const [dr, dc] of dirsAll) {
+      const mr = r + dr;
+      const mc = c + dc;
+      const lr = r + 2 * dr;
+      const lc = c + 2 * dc;
+      if (!inB(mr, mc) || !inB(lr, lc)) continue;
+      const mid = mr * 8 + mc;
+      const to = lr * 8 + lc;
+      const victim = board[mid];
+      if (victim && victim.side !== side && board[to] === null && (mid + to) % 1 === 0) {
+        if ((Math.floor(to / 8) + (to % 8)) % 2 === 1) jumps.push({ from, to });
+      }
+    }
+    if (state.continueFrom !== null) continue;
+    const forward = piece.king
+      ? dirsAll
+      : side === 'dark'
+        ? [
+            [-1, -1],
+            [-1, 1],
+          ]
+        : [
+            [1, -1],
+            [1, 1],
+          ];
+    for (const [dr, dc] of forward) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (!inB(nr, nc)) continue;
+      const to = nr * 8 + nc;
+      if ((nr + nc) % 2 === 1 && board[to] === null) quiet.push({ from, to });
+    }
+  }
+
+  return jumps.length > 0 ? jumps : quiet;
 }

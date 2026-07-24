@@ -5,6 +5,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { prisma } from '../db.js';
+import { generateNexplayId, nexplayTag } from '../identity/nexplay-id.js';
 
 export type AuthUser = {
   id: string;
@@ -71,6 +72,7 @@ export async function registerHandler(req: Request, res: Response) {
   const country = (countryCode ?? 'BF').toUpperCase();
   const { resolveContinent } = await import('../i18n/catalog.js');
   const passwordHash = await argon2.hash(password);
+  const nexplayId = generateNexplayId();
   const user = await prisma.user.create({
     data: {
       email,
@@ -79,6 +81,7 @@ export async function registerHandler(req: Request, res: Response) {
         create: {
           username,
           displayName: displayName ?? username,
+          nexplayId,
           countryCode: country,
           continentCode: resolveContinent(country),
           locale: 'fr',
@@ -172,6 +175,7 @@ function publicUser(user: {
   profile: {
     username: string;
     displayName: string;
+    nexplayId: string | null;
     avatarUrl: string | null;
     countryCode: string;
     locale: string;
@@ -181,11 +185,15 @@ function publicUser(user: {
     bio: string | null;
   } | null;
 }) {
+  const profile = user.profile!;
+  const nexplayId = profile.nexplayId ?? '';
   return {
     id: user.id,
     email: user.email,
     role: user.role ?? 'player',
-    ...user.profile!,
+    ...profile,
+    nexplayId: profile.nexplayId,
+    nexplayTag: nexplayId ? nexplayTag(profile.username, nexplayId) : `${profile.username}#0000`,
   };
 }
 

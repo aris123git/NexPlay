@@ -32,6 +32,10 @@ npm run dev
 - Web : http://localhost:3000
 - API : http://localhost:4000
 
+## V2.6 — Dames + NexPlay ID
+
+Second jeu intégré (`@nexplay/game-dames`) + identifiant officiel joueur — `docs/PLATFORM_V26.md`.
+
 ## V2.5 — Infrastructure mondiale
 
 i18n, classements mondiaux, boutique cosmétique, défis, API publique — `docs/PLATFORM_V25.md`, `docs/MODULES.md`.
